@@ -27,10 +27,11 @@ struct WheelPickerRow<Value: Hashable, Options: View>: View {
             LabeledContent {
                 value
                     .monospacedDigit()
-                    .foregroundStyle(isExpanded ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(isExpanded ? AnyShapeStyle(.tint) : AnyShapeStyle(Color.secondary))
             } label: {
+                // Color.primary rather than .primary: inside a button, .primary is the tint.
                 Text(title)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.primary)
             }
             .contentShape(.rect)
         }
