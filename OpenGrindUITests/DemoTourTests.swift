@@ -34,7 +34,28 @@ final class DemoTourTests: XCTestCase {
         app.buttons["Filters"].tap()
         XCTAssertTrue(app.navigationBars["Filters"].waitForExistence(timeout: 5))
         snapshot(app, "04-filters")
+        let tags = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Tags'")).firstMatch
+        for _ in 0..<6 where !tags.isHittable { app.swipeUp() }
+        tags.tap()
+        XCTAssertTrue(app.buttons["Hiking"].waitForExistence(timeout: 10), "The tag catalog should load")
+        app.buttons["Hiking"].tap()
+        app.buttons["Coffee"].tap()
+        snapshot(app, "11-tags")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["Cancel"].tap()
+
+        app.buttons["Explore Another Place"].tap()
+        XCTAssertTrue(app.navigationBars["Explore"].waitForExistence(timeout: 5))
+        sleep(3)  // Map tiles.
+        app.maps.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.35)).tap()
+        sleep(2)
+        snapshot(app, "12-explore")
+        app.buttons["Explore Here"].tap()
+        XCTAssertTrue(tile.waitForExistence(timeout: 20), "The explored grid should load")
+        sleep(2)
+        snapshot(app, "13-exploring")
+        app.buttons["Back to My Location"].tap()
+        XCTAssertTrue(app.navigationBars["Nearby"].waitForExistence(timeout: 10))
 
         tile.tap()
         let message = app.buttons["Message"]
@@ -68,6 +89,17 @@ final class DemoTourTests: XCTestCase {
         app.tabBars.buttons["Profile"].tap()
         sleep(1)
         snapshot(app, "10-me")
+
+        app.buttons["Edit Photos"].tap()
+        XCTAssertTrue(app.navigationBars["Photos"].waitForExistence(timeout: 5))
+        sleep(2)
+        snapshot(app, "14-photos")
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Photo 2 of'")).firstMatch.tap()
+        XCTAssertTrue(app.buttons["Make Main Photo"].waitForExistence(timeout: 5))
+        snapshot(app, "15-photo-menu")
+        app.buttons["Make Main Photo"].tap()
+        sleep(1)
+        snapshot(app, "16-photos-reordered")
     }
 
     @MainActor
