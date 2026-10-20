@@ -88,7 +88,7 @@ public final class ChatModel: Identifiable {
     }
 
     public func loadIfNeeded() async {
-        guard state == .idle || state.failure != nil else { return }
+        guard state.needsLoad else { return }
         await reload()
     }
 

@@ -35,7 +35,7 @@ public final class InboxModel {
     public var canLoadMore: Bool { nextPage != nil }
 
     public func loadIfNeeded() async {
-        guard state == .idle || state.failure != nil else { return }
+        guard state.needsLoad else { return }
         await refresh()
     }
 

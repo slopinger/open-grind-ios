@@ -134,6 +134,11 @@ public enum JSONValue: Hashable, Sendable, Encodable {
     public static func strings(_ values: some Sequence<String>) -> JSONValue {
         .array(values.map(JSONValue.string))
     }
+
+    /// A date as the API's Unix time in milliseconds.
+    public static func timestamp(_ date: Date?) -> JSONValue {
+        date.map { .number(Double($0.milliseconds)) } ?? .null
+    }
 }
 
 enum JSON {

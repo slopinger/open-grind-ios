@@ -1,7 +1,7 @@
 import Foundation
 
 /// The other side of a conversation.
-public struct ConversationParticipant: Identifiable, Hashable, Sendable {
+public struct ConversationParticipant: Identifiable, Hashable, Sendable, OnlinePresence {
     public var id: ProfileID
     public var photoHash: String?
     public var onlineUntil: Date?
@@ -22,9 +22,6 @@ public struct ConversationParticipant: Identifiable, Hashable, Sendable {
         self.position = position
     }
 
-    public func isOnline(at date: Date = .now) -> Bool {
-        onlineUntil.map { $0 > date } ?? false
-    }
 }
 
 /// What the inbox shows under a conversation's name.
@@ -87,8 +84,12 @@ public struct Conversation: Identifiable, Hashable, Sendable {
 
     /// The profile you are talking to, from the conversation id.
     public func otherProfileID(me: ProfileID) -> ProfileID? {
-        if let participant { return participant.id }
-        let ids = id.split(separator: ":").compactMap { Int($0) }
+        participant?.id ?? Self.otherProfileID(in: id, me: me)
+    }
+
+    /// The other profile in the direct conversation `conversationID`.
+    public static func otherProfileID(in conversationID: String, me: ProfileID) -> ProfileID? {
+        let ids = conversationID.split(separator: ":").compactMap { Int($0) }
         return ids.count == 2 ? ids.first { $0 != me } ?? ids[0] : nil
     }
 }

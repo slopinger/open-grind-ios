@@ -21,8 +21,8 @@ public final class InterestModel {
     }
 
     public func loadIfNeeded() async {
-        async let taps: Void = tapsState == .idle ? refreshTaps() : ()
-        async let views: Void = viewsState == .idle ? refreshViews() : ()
+        async let taps: Void = tapsState.needsLoad ? refreshTaps() : ()
+        async let views: Void = viewsState.needsLoad ? refreshViews() : ()
         _ = await (taps, views)
     }
 

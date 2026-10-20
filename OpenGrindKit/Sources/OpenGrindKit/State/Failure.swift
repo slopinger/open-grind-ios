@@ -44,6 +44,9 @@ public enum LoadState: Sendable, Hashable {
 
     public var isLoading: Bool { self == .loading }
 
+    /// Never loaded, or the last load failed.
+    public var needsLoad: Bool { self == .idle || failure != nil }
+
     public var failure: Failure? {
         if case .failed(let failure) = self { return failure }
         return nil

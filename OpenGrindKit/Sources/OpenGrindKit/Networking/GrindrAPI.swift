@@ -46,20 +46,12 @@ public struct GrindrAPI: Sendable {
 
     /// Short profiles for `ids`, in batches the server accepts.
     public func profiles(_ ids: [ProfileID]) async throws -> [ProfileSummary] {
-        struct Response: Decodable {
-            var profiles: [ProfileSummary]
-            init(from decoder: any Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                profiles = container.lossyArray(of: ProfileSummary.self, forKey: .profiles)
-            }
-            enum CodingKeys: String, CodingKey { case profiles }
-        }
         var summaries: [ProfileSummary] = []
         for start in stride(from: 0, to: ids.count, by: 30) {
             let batch = Array(ids[start..<min(start + 30, ids.count)])
             let request = try APIRequest.json(
                 .post, "/v3/profiles", .object(["targetProfileIds": .ints(batch)]))
-            summaries += try await decode(Response.self, request).profiles
+            summaries += try await decode(LossyProfiles<ProfileSummary>.self, request).profiles
         }
         return summaries
     }
@@ -94,8 +86,8 @@ public struct GrindrAPI: Sendable {
             .json(
                 .put, "/v3/me/profile/images",
                 .object([
-                    "primaryImageHash": mediaHashes.first.map(JSONValue.string) ?? .null,
-                    "secondaryImageHashes": .array(mediaHashes.dropFirst().map(JSONValue.string)),
+                    "primaryImageHash": .optional(mediaHashes.first),
+                    "secondaryImageHashes": .strings(mediaHashes.dropFirst()),
                 ])))
     }
 
@@ -104,7 +96,7 @@ public struct GrindrAPI: Sendable {
         guard !mediaHashes.isEmpty else { return }
         try await perform(
             .json(
-                .delete, "/v3/me/profile/images", .object(["media_hashes": .array(mediaHashes.map(JSONValue.string))])))
+                .delete, "/v3/me/profile/images", .object(["media_hashes": .strings(mediaHashes)])))
     }
 
     /// Records that you viewed a profile, as the official app does when one is opened.
@@ -166,15 +158,7 @@ public struct GrindrAPI: Sendable {
     }
 
     public func receivedTaps() async throws -> [Tap] {
-        struct Response: Decodable {
-            var profiles: [Tap]
-            init(from decoder: any Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                profiles = container.lossyArray(of: Tap.self, forKey: .profiles)
-            }
-            enum CodingKeys: String, CodingKey { case profiles }
-        }
-        return try await decode(Response.self, APIRequest(.get, "/v2/taps/received")).profiles
+        return try await decode(LossyProfiles<Tap>.self, APIRequest(.get, "/v2/taps/received")).profiles
     }
 
     public func profileViews() async throws -> ProfileViews {
@@ -288,5 +272,16 @@ public struct GrindrAPI: Sendable {
         } catch {
             throw GrindrError.invalidResponse("\(request.method.rawValue) \(request.path): \(error)")
         }
+    }
+}
+
+/// A response with a `profiles` array; entries this version can't read are skipped.
+private struct LossyProfiles<Element: Decodable>: Decodable {
+    var profiles: [Element]
+
+    enum CodingKeys: String, CodingKey { case profiles }
+
+    init(from decoder: any Decoder) throws {
+        profiles = try decoder.container(keyedBy: CodingKeys.self).lossyArray(of: Element.self, forKey: .profiles)
     }
 }

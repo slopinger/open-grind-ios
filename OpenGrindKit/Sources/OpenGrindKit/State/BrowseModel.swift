@@ -36,7 +36,7 @@ public final class BrowseModel {
 
     /// Loads the grid unless it is already loaded.
     public func loadIfNeeded() async {
-        guard state == .idle || state.failure != nil else { return }
+        guard state.needsLoad else { return }
         await refresh()
     }
 
@@ -131,10 +131,8 @@ public final class BrowseModel {
                 profiles[index].unreadCount += 1
             }
         case .conversationRead(let conversationID, let reader, _) where reader == session?.profileID:
-            guard
-                let other = conversationID.split(separator: ":").compactMap({ Int($0) }).first(where: {
-                    $0 != reader
-                }), let index = profiles.firstIndex(where: { $0.id == other })
+            guard let other = Conversation.otherProfileID(in: conversationID, me: reader),
+                let index = profiles.firstIndex(where: { $0.id == other })
             else { return }
             profiles[index].unreadCount = 0
         default:

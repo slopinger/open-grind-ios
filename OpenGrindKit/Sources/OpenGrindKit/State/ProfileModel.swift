@@ -116,7 +116,7 @@ public final class MeModel {
     }
 
     public func loadIfNeeded() async {
-        guard state == .idle || state.failure != nil else { return }
+        guard state.needsLoad else { return }
         await refresh()
     }
 

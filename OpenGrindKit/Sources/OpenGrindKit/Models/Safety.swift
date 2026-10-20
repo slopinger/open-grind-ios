@@ -62,7 +62,7 @@ public struct ProfileReport: Hashable, Sendable {
         .object([
             "reason": .string(reason.rawValue),
             "comment": .string(comment),
-            "locations": .array(locations.map(\.rawValue).sorted().map(JSONValue.string)),
+            "locations": .strings(locations.map(\.rawValue).sorted()),
         ])
     }
 }

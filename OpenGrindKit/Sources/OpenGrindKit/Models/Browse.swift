@@ -1,7 +1,7 @@
 import Foundation
 
 /// A profile tile in the nearby grid (`GET /v4/cascade`).
-public struct GridProfile: Identifiable, Hashable, Sendable {
+public struct GridProfile: Identifiable, Hashable, Sendable, OnlinePresence {
     public var id: ProfileID
     public var displayName: String?
     public var age: Int?
@@ -46,9 +46,6 @@ public struct GridProfile: Identifiable, Hashable, Sendable {
         self.isLocked = isLocked
     }
 
-    public func isOnline(at date: Date = .now) -> Bool {
-        onlineUntil.map { $0 > date } ?? false
-    }
 }
 
 /// One page of the nearby grid.

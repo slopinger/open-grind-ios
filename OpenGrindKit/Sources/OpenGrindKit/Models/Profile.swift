@@ -15,8 +15,20 @@ public struct ProfilePhoto: Hashable, Sendable, Identifiable {
     }
 }
 
+/// Something that can be online, such as a profile or a tap.
+public protocol OnlinePresence {
+    /// Until when the server counts it as online; `nil` when it is not.
+    var onlineUntil: Date? { get }
+}
+
+extension OnlinePresence {
+    public func isOnline(at date: Date = .now) -> Bool {
+        onlineUntil.map { $0 > date } ?? false
+    }
+}
+
 /// A full profile, as `GET /v7/profiles/{id}` returns it.
-public struct Profile: Identifiable, Hashable, Sendable {
+public struct Profile: Identifiable, Hashable, Sendable, OnlinePresence {
     public var id: ProfileID
     public var displayName: String?
     public var aboutMe: String?
@@ -123,10 +135,6 @@ public struct Profile: Identifiable, Hashable, Sendable {
 
     public var primaryPhoto: ProfilePhoto? { photos.first }
 
-    public func isOnline(at date: Date = .now) -> Bool {
-        onlineUntil.map { $0 > date } ?? false
-    }
-
     /// The conversation id of a chat between this profile and `profileID`.
     public func conversationID(with profileID: ProfileID) -> String {
         Conversation.id(between: id, and: profileID)
@@ -220,7 +228,7 @@ extension Profile: Decodable {
 }
 
 /// A short profile, as `POST /v3/profiles` returns it for a batch of ids.
-public struct ProfileSummary: Identifiable, Hashable, Sendable, Decodable {
+public struct ProfileSummary: Identifiable, Hashable, Sendable, Decodable, OnlinePresence {
     public var id: ProfileID
     public var displayName: String?
     public var age: Int?

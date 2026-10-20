@@ -349,7 +349,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
                                 .object([
                                     "profileId": .int(profile.id),
                                     "primaryMediaHash": .optional(profile.primaryPhoto?.mediaHash),
-                                    "onlineUntil": .optional(profile.onlineUntil.map { Double($0.milliseconds) }),
+                                    "onlineUntil": .timestamp(profile.onlineUntil),
                                     "distanceMetres": .optional(profile.distance),
                                     "position": .optional(profile.position?.rawValue),
                                 ])
@@ -390,7 +390,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
             "profile": .object([
                 "profileId": .int(profile.id), "name": .optional(profile.displayName),
                 "mediaHash": .optional(profile.primaryPhoto?.mediaHash),
-                "onlineUntil": .optional(profile.onlineUntil.map { Double($0.milliseconds) }),
+                "onlineUntil": .timestamp(profile.onlineUntil),
                 "distance": .optional(profile.distance), "showDistance": .bool(profile.showsDistance),
             ]),
         ])
@@ -432,10 +432,6 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
 
     // MARK: Encoding in API shapes
 
-    private static func timestamp(_ date: Date?) -> JSONValue {
-        date.map { .number(Double($0.milliseconds)) } ?? .null
-    }
-
     private static func ids(_ values: [some ProfileAttribute]) -> JSONValue {
         .ints(values.map(\.rawValue))
     }
@@ -450,8 +446,8 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
             "distance": .optional(profile.distance),
             "approximateDistance": .bool(profile.isDistanceApproximate),
             "showDistance": .bool(profile.showsDistance),
-            "onlineUntil": timestamp(profile.onlineUntil),
-            "seen": timestamp(profile.lastSeen),
+            "onlineUntil": .timestamp(profile.onlineUntil),
+            "seen": .timestamp(profile.lastSeen),
             "medias": .array(
                 profile.photos.map {
                     .object([
@@ -471,12 +467,12 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
             "meetAt": ids(profile.meetAt),
             "nsfw": .optional(profile.acceptsNSFWPics?.rawValue),
             "hivStatus": .optional(profile.hivStatus?.rawValue),
-            "lastTestedDate": timestamp(profile.lastTested),
+            "lastTestedDate": .timestamp(profile.lastTested),
             "sexualHealth": ids(profile.sexualHealth),
             "vaccines": ids(profile.vaccines),
             "genders": .ints(profile.genderIDs),
             "pronouns": .ints(profile.pronounIDs),
-            "profileTags": .array(profile.tags.map(JSONValue.string)),
+            "profileTags": .strings(profile.tags),
             "socialNetworks": profile.instagram.map {
                 .object(["instagram": .object(["userId": .string($0)])])
             }
@@ -496,7 +492,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
         .object([
             "profileId": .string(String(profile.id)), "displayName": .optional(profile.displayName),
             "age": .optional(profile.age), "distance": .optional(profile.distance),
-            "onlineUntil": timestamp(profile.onlineUntil),
+            "onlineUntil": .timestamp(profile.onlineUntil),
             "profileImageMediaHash": .optional(profile.primaryPhoto?.mediaHash),
             "isFavorite": .bool(profile.isFavorite),
         ])
@@ -512,8 +508,8 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
                 profile.primaryPhoto.map {
                     MediaURL.profileImage($0.mediaHash, size: .thumbnail).absoluteString
                 }),
-            "onlineUntil": timestamp(profile.onlineUntil),
-            "lastOnline": timestamp(profile.lastSeen),
+            "onlineUntil": .timestamp(profile.onlineUntil),
+            "lastOnline": .timestamp(profile.lastSeen),
             "sexualPosition": .optional(profile.position?.rawValue),
             "unreadCount": .int(profile.unreadCount),
             "favorite": .bool(profile.isFavorite),
@@ -544,7 +540,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
             "messageId": .string(message.id),
             "conversationId": .string(message.conversationID),
             "senderId": .int(message.senderID),
-            "timestamp": timestamp(message.date),
+            "timestamp": .timestamp(message.date),
             "unsent": .bool(message.content == .unsent),
             "reactions": .array(
                 message.reactions.map {
@@ -560,9 +556,9 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
         .object([
             "profileId": .string(String(tap.profileID)), "displayName": .optional(tap.displayName),
             "profileImageMediaHash": .optional(tap.photoHash), "distance": .optional(tap.distance),
-            "timestamp": timestamp(tap.date), "tapType": .int(tap.type?.rawValue ?? 3),
+            "timestamp": .timestamp(tap.date), "tapType": .int(tap.type?.rawValue ?? 3),
             "isMutual": .bool(tap.isMutual),
-            "onlineUntil": timestamp(tap.onlineUntil), "isFavorite": .bool(tap.isFavorite),
+            "onlineUntil": .timestamp(tap.onlineUntil), "isFavorite": .bool(tap.isFavorite),
             "isViewable": .bool(true),
             "isBoosting": .bool(false), "rightNowType": .string("NONE"), "lastOnline": .null,
         ])
@@ -572,7 +568,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
         .object([
             "profileId": .string(String(viewer.profileID)), "displayName": .optional(viewer.displayName),
             "profileImageMediaHash": .optional(viewer.photoHash), "distance": .optional(viewer.distance),
-            "lastViewed": timestamp(viewer.lastViewed), "onlineUntil": timestamp(viewer.onlineUntil),
+            "lastViewed": .timestamp(viewer.lastViewed), "onlineUntil": .timestamp(viewer.onlineUntil),
             "isFavorite": .bool(viewer.isFavorite), "isSecretAdmirer": .bool(false),
             "viewedCount": .object(["totalCount": .int(viewer.viewCount), "maxDisplayCount": .int(99)]),
         ])

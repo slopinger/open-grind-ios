@@ -108,7 +108,7 @@ public struct ProfileEdit: Hashable, Sendable {
         if acceptsNSFWPics != original.acceptsNSFWPics { fields["nsfw"] = one(acceptsNSFWPics) }
         if hivStatus != original.hivStatus { fields["hivStatus"] = one(hivStatus) }
         if lastTested != original.lastTested {
-            fields["lastTestedDate"] = lastTested.map { .number(Double($0.milliseconds)) } ?? .null
+            fields["lastTestedDate"] = .timestamp(lastTested)
         }
         if sexualHealth != original.sexualHealth { fields["sexualHealth"] = set(sexualHealth) }
         if vaccines != original.vaccines { fields["vaccines"] = set(vaccines) }

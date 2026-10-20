@@ -1,7 +1,7 @@
 import Foundation
 
 /// A tap someone sent you (`GET /v2/taps/received`).
-public struct Tap: Identifiable, Hashable, Sendable {
+public struct Tap: Identifiable, Hashable, Sendable, OnlinePresence {
     public var profileID: ProfileID
     public var displayName: String?
     public var photoHash: String?
@@ -37,9 +37,6 @@ public struct Tap: Identifiable, Hashable, Sendable {
         self.isViewable = isViewable
     }
 
-    public func isOnline(at date: Date = .now) -> Bool {
-        onlineUntil.map { $0 > date } ?? false
-    }
 }
 
 extension Tap: Decodable {
@@ -65,7 +62,7 @@ extension Tap: Decodable {
 }
 
 /// Someone who viewed your profile (`GET /v7/views/list`).
-public struct ProfileViewer: Identifiable, Hashable, Sendable {
+public struct ProfileViewer: Identifiable, Hashable, Sendable, OnlinePresence {
     public var profileID: ProfileID
     public var displayName: String?
     public var photoHash: String?
@@ -93,9 +90,6 @@ public struct ProfileViewer: Identifiable, Hashable, Sendable {
         self.isFavorite = isFavorite
     }
 
-    public func isOnline(at date: Date = .now) -> Bool {
-        onlineUntil.map { $0 > date } ?? false
-    }
 }
 
 /// Your profile views: the viewers you may see, and how many more are hidden
