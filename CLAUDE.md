@@ -68,10 +68,10 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   `PUT /v3/me/profile/images {primaryImageHash, secondaryImageHashes}` (max 6 in total);
   `DELETE /v3/me/profile/images {media_hashes}`. New photos are "Pending" until moderated.
 - Tags: catalog `GET /v1/tags` (per language, first one used), cascade filter `tags=key1,key2`;
-  profiles carry tag texts. Explore: `exploreGeoHash` next to `nearbyGeoHash` on `/v4/cascade`; without
-  XTRA/Unlimited Grindr answers with the bare text `CAS-4001` (mapped to `requiresSubscription`). Sending
-  the place as `nearbyGeoHash` instead would work for free accounts but makes Grindr treat it as your
-  own location, so it is not done.
+  profiles carry tag texts. Explore (free, unlike Roam's `/v1/roam/*`, which moves you): `/v4/cascade` with
+  **only** `exploreGeoHash`. The official app (26.16, `SearchParams`) refuses nearby and explore geohashes
+  together; sending both got the bare text `CAS-4001` (still mapped to `requiresSubscription`). Every
+  cascade with `nearbyGeoHash` moves your profile there, so exploring needs no location fix at all.
 - Genders/pronouns: `genders`/`pronouns` ID lists in the profile PATCH, max 3 each (upstream). Gender
   catalog: `displayGroup` 0 = not offered, `sortProfile`, `excludeOnProfileSelection`.
 - Filters persist per account (`PreferenceStore`, UserDefaults key `browseFilters.<profileID>`), cleared on

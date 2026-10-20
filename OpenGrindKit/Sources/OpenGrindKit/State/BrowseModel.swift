@@ -18,6 +18,9 @@ public final class BrowseModel {
     /// Remembers applied filters for the next launch; the explored place is not kept.
     @ObservationIgnored private let saveFilters: (BrowseFilters) -> Void
     @ObservationIgnored private var nextPage: Int?
+    /// Where the loaded pages come from, for the next page.
+    @ObservationIgnored private var area: BrowseArea?
+    /// Where you were when the grid last loaded nearby.
     @ObservationIgnored private var geohash: String?
     /// Bumped on every reload, so a page that arrives late for an old query is dropped.
     @ObservationIgnored private var generation = 0
@@ -40,17 +43,22 @@ public final class BrowseModel {
         await refresh()
     }
 
-    /// Finds you again and reloads the first page.
+    /// Reloads the first page, finding you again unless you are exploring.
     public func refresh() async {
         generation += 1
         let generation = generation
         if profiles.isEmpty { state = .loading }
         do {
-            let geohash = try await location.currentGeohash()
-            let page = try await api.cascade(
-                near: geohash, exploring: exploring?.geohash, filters: filters, page: nil)
+            let area: BrowseArea
+            if let exploring {
+                area = .exploring(geohash: exploring.geohash)
+            } else {
+                area = .nearby(geohash: try await location.currentGeohash())
+            }
+            let page = try await api.cascade(area, filters: filters, page: nil)
             guard generation == self.generation else { return }
-            self.geohash = geohash
+            self.area = area
+            if case .nearby(let geohash) = area { self.geohash = geohash }
             profiles = page.profiles
             nextPage = page.nextPage
             state = .loaded
@@ -80,13 +88,12 @@ public final class BrowseModel {
     }
 
     public func loadMore() async {
-        guard !isLoadingMore, let page = nextPage, let geohash, state == .loaded else { return }
+        guard !isLoadingMore, let page = nextPage, let area, state == .loaded else { return }
         let generation = generation
         isLoadingMore = true
         defer { isLoadingMore = false }
         do {
-            let next = try await api.cascade(
-                near: geohash, exploring: exploring?.geohash, filters: filters, page: page)
+            let next = try await api.cascade(area, filters: filters, page: page)
             guard generation == self.generation else { return }
             let known = Set(profiles.map(\.id))
             profiles += next.profiles.filter { !known.contains($0.id) }

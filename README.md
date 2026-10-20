@@ -27,8 +27,8 @@ Everyone shown is made up; the avatars are DiceBear's Notionists by Zoish (CC0).
 - **Browse**: the nearby grid with presence, favorites and unread counts; filters for age, height,
   weight, position, tribes, looking for, profile tags and more, remembered between launches; pull
   to refresh and endless scrolling. **Explore** another place by searching for a city or moving a
-  pin on a map; your own location stays where it is. Grindr only allows exploring with an XTRA or
-  Unlimited subscription.
+  pin on a map; your own profile stays where you are (moving it is Grindr's paid Roam, which the
+  app doesn't do).
 - **Profiles**: photo pager with a zoomable full-screen viewer, every profile detail, taps,
   favorites, and hide, block and report.
 - **Messages**: the inbox with search, filters, pin, mute and delete; chats with live updates,

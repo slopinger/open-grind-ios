@@ -7,7 +7,7 @@ struct RequestTests {
     @Test func defaultFiltersSendOnlyTheLocation() async throws {
         let transport = FakeTransport { _ in .json(#"{"items":[],"nextPage":null}"#) }
         let api = GrindrAPI(transport: transport)
-        _ = try await api.cascade(near: "u33dc0cppvbz", filters: BrowseFilters(), page: nil)
+        _ = try await api.cascade(.nearby(geohash: "u33dc0cppvbz"), filters: BrowseFilters(), page: nil)
         let request = try #require(transport.requests.first)
         #expect(request.method == .get)
         let components = try #require(URLComponents(string: request.path))
@@ -18,15 +18,14 @@ struct RequestTests {
             ])
     }
 
-    @Test func exploringKeepsYourLocationAndAddsTheCoarsenedPlace() async throws {
+    @Test func exploringSendsOnlyTheCoarsenedPlace() async throws {
         let transport = FakeTransport { _ in .json(#"{"items":[],"nextPage":null}"#) }
         let api = GrindrAPI(transport: transport)
-        _ = try await api.cascade(
-            near: "u33dc0cppvbz", exploring: "dr5regw3pg6f", filters: BrowseFilters(), page: nil)
+        _ = try await api.cascade(.exploring(geohash: "dr5regw3pg6f"), filters: BrowseFilters(), page: nil)
         let request = try #require(transport.requests.first)
         let items = try #require(URLComponents(string: request.path)?.queryItems)
-        #expect(items.first { $0.name == "nearbyGeoHash" }?.value == Geohash.coarsen("u33dc0cppvbz"))
-        #expect(items.first { $0.name == "exploreGeoHash" }?.value == Geohash.coarsen("dr5regw3pg6f"))
+        // Your location would move your profile; Grindr's app never sends both.
+        #expect(items == [URLQueryItem(name: "exploreGeoHash", value: Geohash.coarsen("dr5regw3pg6f"))])
     }
 
     @Test func filtersBecomeCascadeQueryItems() {

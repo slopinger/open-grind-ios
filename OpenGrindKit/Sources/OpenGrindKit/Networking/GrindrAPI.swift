@@ -13,14 +13,18 @@ public struct GrindrAPI: Sendable {
 
     // MARK: Browse
 
-    /// A page of profiles around `geohash`, your location, or around `exploring`
-    /// when set. Exploring does not move your own profile.
-    public func cascade(near geohash: String, exploring: String? = nil, filters: BrowseFilters, page: Int?)
-        async throws -> CascadePage
-    {
-        var query = [URLQueryItem(name: "nearbyGeoHash", value: Geohash.coarsen(geohash))]
-        if let exploring {
-            query.append(URLQueryItem(name: "exploreGeoHash", value: Geohash.coarsen(exploring)))
+    /// A page of profiles in `area`.
+    ///
+    /// The request carries either `nearbyGeoHash` or `exploreGeoHash`, never both, as
+    /// in the official app: browsing nearby moves your profile to that place, exploring
+    /// leaves it where it is.
+    public func cascade(_ area: BrowseArea, filters: BrowseFilters, page: Int?) async throws -> CascadePage {
+        var query: [URLQueryItem]
+        switch area {
+        case .nearby(let geohash):
+            query = [URLQueryItem(name: "nearbyGeoHash", value: Geohash.coarsen(geohash))]
+        case .exploring(let geohash):
+            query = [URLQueryItem(name: "exploreGeoHash", value: Geohash.coarsen(geohash))]
         }
         query += filters.queryItems()
         if let page { query.append(URLQueryItem(name: "pageNumber", value: String(page))) }

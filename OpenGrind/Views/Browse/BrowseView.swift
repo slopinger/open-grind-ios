@@ -53,7 +53,7 @@ struct BrowseView: View {
         }
     }
 
-    /// Exploring can fail for good, e.g. without a subscription; this always works.
+    /// A place can fail to load for good; going back to your location always works.
     private var backToMyLocation: FailureView.Recovery? {
         guard browse.exploring != nil else { return nil }
         return FailureView.Recovery(title: "Back to My Location") {

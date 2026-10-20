@@ -179,6 +179,22 @@ struct ModelTests {
         #expect(browse.state == .failed(.location(.denied)))
     }
 
+    @Test func exploringWorksWithoutYourLocation() async throws {
+        struct NoLocation: LocationProviding {
+            func currentGeohash() async throws -> String { throw LocationError.denied }
+        }
+        let transport = FakeTransport { _ in
+            .json(#"{"items":[{"type":"full_profile_v1","data":{"profileId":1}}],"nextPage":2}"#)
+        }
+        let browse = BrowseModel(api: GrindrAPI(transport: transport), location: NoLocation())
+        await browse.explore(ExplorePlace(latitude: 52.52, longitude: 13.405))
+        #expect(browse.state == .loaded)
+        await browse.loadMore()
+        let pages = transport.requests.compactMap { URLComponents(string: $0.path)?.queryItems }
+        #expect(pages.count == 2)
+        #expect(pages.allSatisfy { items in !items.contains { $0.name == "nearbyGeoHash" } })
+    }
+
     @Test func browsePagesUntilTheServerStops() async {
         let transport = FakeTransport { request in
             let page = URLComponents(string: request.path)?.queryItems?.first { $0.name == "pageNumber" }?
