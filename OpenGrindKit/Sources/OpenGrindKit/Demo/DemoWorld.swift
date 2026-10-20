@@ -317,6 +317,19 @@ actor DemoWorld {
         return threads[conversationID]?.messages[index]
     }
 
+    /// Applies `PUT /v3/me/profile/images`: photos you uploaded stay in review.
+    func setMyPhotos(_ hashes: [String]) {
+        let known = Dictionary(me.profile.photos.map { ($0.mediaHash, $0) }, uniquingKeysWith: { first, _ in first })
+        me.profile.photos = hashes.prefix(6).map {
+            known[$0] ?? ProfilePhoto(mediaHash: $0, isPendingReview: uploadedPhotos[$0] != nil)
+        }
+    }
+
+    func deleteMyPhotos(_ hashes: Set<String>) {
+        me.profile.photos.removeAll { hashes.contains($0.mediaHash) }
+        for hash in hashes { uploadedPhotos[hash] = nil }
+    }
+
     func upload(_ data: Data) -> (mediaID: Int, url: URL, hash: String) {
         let mediaID = nextMediaID
         nextMediaID += 1

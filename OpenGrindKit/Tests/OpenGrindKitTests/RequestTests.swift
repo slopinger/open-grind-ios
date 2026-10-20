@@ -71,6 +71,29 @@ struct RequestTests {
         #expect(applied.lookingFor == [.chat, .friends])
     }
 
+    @Test func profilePhotosAreUploadedWithACentredSquareThumbnail() async throws {
+        let transport = FakeTransport { _ in
+            .json(#"{"hash":"h","mediaId":7,"imageSizes":[{"mediaHash":"abc","state":"Pending"}]}"#)
+        }
+        let photo = try await GrindrAPI(transport: transport).uploadProfilePhoto(Data([1]), width: 400, height: 300)
+        #expect(photo == ProfilePhoto(mediaHash: "abc", isPendingReview: true))
+        let request = try #require(transport.requests.first)
+        #expect(request.method == .post)
+        let items = try #require(URLComponents(string: request.path)?.queryItems)
+        #expect(items.first { $0.name == "thumbCoords" }?.value == "300,50,350,0", "bottom,left,right,top")
+    }
+
+    @Test func theFirstPhotoIsTheMainOne() async throws {
+        let transport = FakeTransport { _ in .json("{}") }
+        try await GrindrAPI(transport: transport).setProfilePhotos(["a", "b", "c"])
+        try await GrindrAPI(transport: transport).setProfilePhotos([])
+        let bodies = transport.requests.compactMap(\.jsonObject)
+        #expect(bodies.first?["primaryImageHash"] as? String == "a")
+        #expect(bodies.first?["secondaryImageHashes"] as? [String] == ["b", "c"])
+        #expect(bodies.last?["primaryImageHash"] is NSNull)
+        #expect(bodies.last?["secondaryImageHashes"] as? [String] == [])
+    }
+
     @Test func overlongTextIsInvalid() {
         var edit = ProfileEdit(Profile(id: 1))
         #expect(edit.isValid)

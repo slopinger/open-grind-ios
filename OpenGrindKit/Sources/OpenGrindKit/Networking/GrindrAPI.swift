@@ -69,6 +69,44 @@ public struct GrindrAPI: Sendable {
         try await perform(.json(.patch, "/v4/me/profile", patch))
     }
 
+    /// Uploads a JPEG of `width` × `height` pixels for your profile. Grindr cuts
+    /// the square thumbnail from its centre. The photo is not shown until it is
+    /// added with ``setProfilePhotos(_:)``.
+    public func uploadProfilePhoto(_ jpeg: Data, width: Int, height: Int) async throws -> ProfilePhoto {
+        let side = min(width, height)
+        let left = (width - side) / 2
+        let top = (height - side) / 2
+        // Bottom, left, right, top; a thumbnail that isn't square is silently dropped.
+        let thumbnail = "\(top + side),\(left),\(left + side),\(top)"
+        let request = APIRequest(
+            .post, "/v4/media/upload",
+            query: [
+                URLQueryItem(name: "takenOnGrindr", value: "false"),
+                URLQueryItem(name: "thumbCoords", value: thumbnail),
+            ],
+            body: .bytes(contentType: "application/octet-stream", jpeg))
+        return try await decode(UploadedProfilePhoto.self, request).photo
+    }
+
+    /// Sets your profile photos, the first one being the main photo.
+    public func setProfilePhotos(_ mediaHashes: [String]) async throws {
+        try await perform(
+            .json(
+                .put, "/v3/me/profile/images",
+                .object([
+                    "primaryImageHash": mediaHashes.first.map(JSONValue.string) ?? .null,
+                    "secondaryImageHashes": .array(mediaHashes.dropFirst().map(JSONValue.string)),
+                ])))
+    }
+
+    /// Removes photos from your profile and deletes them from Grindr's servers.
+    public func deleteProfilePhotos(_ mediaHashes: [String]) async throws {
+        guard !mediaHashes.isEmpty else { return }
+        try await perform(
+            .json(
+                .delete, "/v3/me/profile/images", .object(["media_hashes": .array(mediaHashes.map(JSONValue.string))])))
+    }
+
     /// Records that you viewed a profile, as the official app does when one is opened.
     public func recordView(of id: ProfileID) async throws {
         try await perform(

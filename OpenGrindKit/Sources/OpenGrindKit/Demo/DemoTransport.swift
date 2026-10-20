@@ -105,6 +105,31 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
             }
             return try .json(["profiles": .array(summaries)])
         }
+        if route.matches(.post, "v4/media/upload") {
+            guard case .bytes(_, let data) = request.body else { return .badRequest }
+            let upload = await world.upload(data)
+            return try .json([
+                "hash": .string(upload.hash), "mediaId": .int(upload.mediaID),
+                "imageSizes": .array([
+                    .object([
+                        "mediaHash": .string(upload.hash), "fullUrl": .string(upload.url.absoluteString),
+                        "state": .string("Pending"),
+                    ])
+                ]),
+            ])
+        }
+        if route.matches(.put, "v3/me/profile/images") {
+            let object = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
+            let primary = object?["primaryImageHash"] as? String
+            let secondary = object?["secondaryImageHashes"] as? [String] ?? []
+            await world.setMyPhotos((primary.map { [$0] } ?? []) + secondary)
+            return .ok
+        }
+        if route.matches(.delete, "v3/me/profile/images") {
+            let object = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
+            await world.deleteMyPhotos(Set(object?["media_hashes"] as? [String] ?? []))
+            return .ok
+        }
         if route.matches(.patch, "v4/me/profile") {
             await world.updateMe(body)
             return .ok
@@ -428,7 +453,8 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
             "medias": .array(
                 profile.photos.map {
                     .object([
-                        "mediaHash": .string($0.mediaHash), "type": .int(1), "state": .int(1), "reason": .null,
+                        "mediaHash": .string($0.mediaHash), "type": .int(1), "state": .int($0.isPendingReview ? 0 : 1),
+                        "reason": .null,
                     ])
                 }),
             "profileImageMediaHash": .optional(profile.primaryPhoto?.mediaHash),

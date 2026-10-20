@@ -97,6 +97,7 @@ public final class MeModel {
     public private(set) var blockedState: LoadState = .idle
     public private(set) var genders: [Gender] = []
     public private(set) var pronouns: [Pronoun] = []
+    public private(set) var isUploadingPhoto = false
     public var actionFailure: Failure?
 
     /// A blocked profile with what is known about it.
@@ -138,6 +139,52 @@ public final class MeModel {
         guard let patch = edit.patch(from: ProfileEdit(profile)) else { return }
         try await api.updateProfile(patch)
         self.profile = edit.applied(to: profile)
+    }
+
+    // MARK: Photos
+
+    /// Grindr allows a main photo and five more.
+    public static let maxPhotos = 6
+
+    public var canAddPhoto: Bool { (profile?.photos.count ?? 0) < Self.maxPhotos && !isUploadingPhoto }
+
+    /// Uploads a JPEG and adds it as your last photo.
+    public func addPhoto(_ jpeg: Data, width: Int, height: Int) async {
+        guard canAddPhoto else { return }
+        isUploadingPhoto = true
+        defer { isUploadingPhoto = false }
+        do {
+            let photo = try await api.uploadProfilePhoto(jpeg, width: width, height: height)
+            let photos = (profile?.photos ?? []) + [photo]
+            try await api.setProfilePhotos(photos.map(\.mediaHash))
+            profile?.photos = photos
+        } catch {
+            actionFailure = Failure(error)
+        }
+    }
+
+    /// Saves a new order; the first photo becomes the main one.
+    public func setPhotoOrder(_ photos: [ProfilePhoto]) async {
+        guard let original = profile?.photos, photos != original else { return }
+        profile?.photos = photos
+        do {
+            try await api.setProfilePhotos(photos.map(\.mediaHash))
+        } catch {
+            profile?.photos = original
+            actionFailure = Failure(error)
+        }
+    }
+
+    /// Deletes a photo from your profile and from Grindr's servers.
+    public func deletePhoto(_ photo: ProfilePhoto) async {
+        guard let original = profile?.photos else { return }
+        profile?.photos.removeAll { $0 == photo }
+        do {
+            try await api.deleteProfilePhotos([photo.mediaHash])
+        } catch {
+            profile?.photos = original
+            actionFailure = Failure(error)
+        }
     }
 
     public func gender(_ id: Int) -> Gender? { genders.first { $0.id == id } }

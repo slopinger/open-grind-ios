@@ -324,3 +324,28 @@ public struct BlockedProfile: Identifiable, Hashable, Sendable, Decodable {
         blockedAt = container.timestamp(forKey: .blockedTime)
     }
 }
+
+/// The answer to a profile photo upload (`POST /v4/media/upload`).
+struct UploadedProfilePhoto: Decodable {
+    var photo: ProfilePhoto
+
+    enum CodingKeys: String, CodingKey {
+        case hash, imageSizes
+    }
+
+    private struct ImageSize: Decodable {
+        var mediaHash: String?
+        var state: String?
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let size = container.lossyArray(of: ImageSize.self, forKey: .imageSizes).first
+        guard let hash = size?.mediaHash ?? container.lenient(String.self, forKey: .hash), !hash.isEmpty else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .imageSizes, in: container, debugDescription: "The upload named no photo")
+        }
+        // New photos wait for moderation unless the server says otherwise.
+        photo = ProfilePhoto(mediaHash: hash, isPendingReview: (size?.state ?? "Pending") == "Pending")
+    }
+}

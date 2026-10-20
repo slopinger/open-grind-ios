@@ -122,4 +122,25 @@ struct DemoTests {
         let media = try await session.api.transport.fetchMedia(at: url, maxBytes: 1_000_000)
         #expect(media.data == Data([0xFF, 0xD8, 0xFF]))
     }
+
+    @Test func profilePhotosCanBeAddedReorderedAndDeleted() async throws {
+        let session = try await signedIn()
+        let me = session.me
+        await me.loadIfNeeded()
+        let before = try #require(me.profile?.photos)
+        await me.addPhoto(Data([0xFF, 0xD8, 0xFF]), width: 400, height: 300)
+        let added = try #require(me.profile?.photos.last)
+        #expect(me.profile?.photos.count == before.count + 1)
+        #expect(added.isPendingReview)
+
+        let reordered = [added] + before
+        await me.setPhotoOrder(reordered)
+        await me.refresh()
+        #expect(me.profile?.photos == reordered, "the new photo is now the main one and still in review")
+
+        await me.deletePhoto(added)
+        await me.refresh()
+        #expect(me.profile?.photos == before)
+        #expect(me.actionFailure == nil)
+    }
 }
