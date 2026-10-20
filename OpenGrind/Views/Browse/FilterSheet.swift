@@ -61,6 +61,12 @@ struct FilterSheet: View {
                     MultiSelectRow(title: "NSFW Pics", selection: $filters.acceptsNSFWPics, emptyLabel: "Any")
                 }
 
+                Section {
+                    TagFilterRow(selection: $filters.tags)
+                } footer: {
+                    Text("Tags are interests people add to their profile.")
+                }
+
                 if !filters.isDefault {
                     Section {
                         Button("Reset Filters", role: .destructive) {
