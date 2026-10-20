@@ -63,6 +63,16 @@
         }
       );
 
+      # Built by hydra.kyouma.net (project open-grind-ios): every check, per Linux
+      # system, named like the official Hydra convention (`core.x86_64-linux`).
+      hydraJobs =
+        let
+          linux = [ "x86_64-linux" ];
+        in
+        nixpkgs.lib.genAttrs (builtins.attrNames self.checks.x86_64-linux) (
+          check: nixpkgs.lib.genAttrs linux (system: self.checks.${system}.${check})
+        );
+
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell.override { inherit (pkgs.swiftPackages) stdenv; } {
           packages = [
