@@ -2,6 +2,7 @@ import Foundation
 import ImageIO
 import OpenGrindKit
 import PhotosUI
+import SwiftUI
 import UniformTypeIdentifiers
 
 /// Prepares photos for sending: at most 2048 pixels on the long side, JPEG,
