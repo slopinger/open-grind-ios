@@ -20,8 +20,9 @@ struct FormattingTests {
 
     @Test func everyFailureHasText() {
         let errors: [GrindrError] = [
-            .offline, .timedOut, .notSignedIn, .unauthorized, .rateLimited, .unavailable, .requiresSubscription,
-            .rejectedText, .invalidResponse, .cancelled,
+            .offline, .timedOut, .notSignedIn, .unauthorized, .banned(.underage, reason: nil), .rateLimited,
+            .blocked, .server(status: 503, code: nil, message: nil), .unavailable, .requiresSubscription,
+            .rejectedText, .invalidResponse("x"), .mediaTooLarge, .cancelled,
         ]
         for failure in errors.map(Failure.grindr) + [.location(.denied), .location(.unavailable), .unexpected("x")] {
             let text = FailureText(failure)
