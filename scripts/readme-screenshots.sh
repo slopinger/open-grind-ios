@@ -18,7 +18,7 @@ shots=(
     chat:07-chat
     messages:08-messages
     interest:09-interest
-    tags:11-tags
+    edit-profile:18-edit-profile
     photos:14-photos
 )
 

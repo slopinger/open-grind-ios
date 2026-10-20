@@ -8,13 +8,18 @@ Grindr's terms of service.
 
 <table align="center">
   <tr>
-    <td align="center" width="33%"><img src="docs/screenshots/nearby.png" width="240" alt="Nearby grid of profile photos with names, ages and online dots"><br><b>Nearby</b></td>
-    <td align="center" width="33%"><img src="docs/screenshots/profile.png" width="240" alt="A profile with a large photo, online status, about text, stats and a Message button"><br><b>Profiles</b></td>
-    <td align="center" width="33%"><img src="docs/screenshots/chat.png" width="240" alt="A chat with yellow outgoing and grey incoming bubbles, a Read receipt and the message field"><br><b>Chats</b></td>
+    <td align="center" width="33%"><img src="docs/screenshots/nearby.png" width="240" alt="Nearby grid of profile photos with names, ages and online dots, below a field to explore another place and a filter button"><br><b>Nearby</b></td>
+    <td align="center" width="33%"><img src="docs/screenshots/explore.png" width="240" alt="A map of Berlin with a pin, a city search field and an Explore Here button"><br><b>Explore</b></td>
+    <td align="center" width="33%"><img src="docs/screenshots/profile.png" width="240" alt="A profile with a large photo, online status, about text, tags and a Message button"><br><b>Profiles</b></td>
   </tr>
   <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/chat.png" width="240" alt="A chat with yellow outgoing and grey incoming bubbles, a Read receipt and the message field"><br><b>Chats</b></td>
     <td align="center" width="33%"><img src="docs/screenshots/messages.png" width="240" alt="Inbox with search, photos, last messages and times"><br><b>Messages</b></td>
     <td align="center" width="33%"><img src="docs/screenshots/interest.png" width="240" alt="Taps received, with tap emoji, distances and a Mutual badge"><br><b>Interest</b></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/edit-profile.png" width="240" alt="Edit Profile form with photos, about text, tags and stats such as age, height and weight"><br><b>Edit Profile</b></td>
+    <td align="center" width="33%"><img src="docs/screenshots/photos.png" width="240" alt="Photo editor with the main photo marked, a second photo and a button to add more"><br><b>Photos</b></td>
     <td align="center" width="33%"><img src="docs/screenshots/welcome.png" width="240" alt="Welcome screen with the Open Grind logo, its privacy promises and buttons to sign in or try the demo"><br><b>Demo without an account</b></td>
   </tr>
 </table>
