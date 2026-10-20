@@ -97,9 +97,6 @@ public enum TransportEvent: Sendable, Hashable {
     case realtimeConnectionChanged(isConnected: Bool)
     /// The server ended the session.
     case sessionEnded(banned: Bool, reason: String?)
-    /// A background token refresh failed but the session is kept.
-    case refreshFailed(isTransient: Bool)
-    case refreshRecovered
 }
 
 /// The connection to Grindr: authentication, REST, CDN and realtime.
@@ -124,8 +121,6 @@ public protocol GrindrTransport: AnyObject, Sendable {
 
     /// Opts in to realtime events; the transport reconnects on its own.
     func connectRealtime() async throws
-
-    func sendRealtimeCommand(type: String, refID: String, payload: Data) async throws
 
     /// Follows the app into the foreground (`true`) and background.
     func setActive(_ isActive: Bool)

@@ -55,8 +55,6 @@ final class FakeTransport: GrindrTransport, @unchecked Sendable {
 
     func connectRealtime() async throws {}
 
-    func sendRealtimeCommand(type: String, refID: String, payload: Data) async throws {}
-
     func setActive(_ isActive: Bool) {}
 }
 

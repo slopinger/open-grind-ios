@@ -73,13 +73,6 @@ public final class CoreTransport: GrindrTransport, @unchecked Sendable {
         try await Self.mapAsyncErrors { try await client.connect() }
     }
 
-    public func sendRealtimeCommand(type: String, refID: String, payload: Data) async throws {
-        try await Self.mapAsyncErrors {
-            try await client.sendWebsocketCommand(
-                commandType: type, refId: refID, payloadJson: String(decoding: payload, as: UTF8.self))
-        }
-    }
-
     public func setActive(_ isActive: Bool) {
         client.setActive(active: isActive)
     }
@@ -184,8 +177,6 @@ private final class Listener: CoreListener, @unchecked Sendable {
         switch notice {
         case .signedOut: emit(.sessionEnded(banned: false, reason: nil))
         case .banned(_, let reason): emit(.sessionEnded(banned: true, reason: reason))
-        case .refreshFailed(_, let transient): emit(.refreshFailed(isTransient: transient))
-        case .refreshRecovered: emit(.refreshRecovered)
         }
     }
 }

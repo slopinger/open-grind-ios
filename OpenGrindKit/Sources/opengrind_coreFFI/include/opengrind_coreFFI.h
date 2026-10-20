@@ -303,11 +303,6 @@ uint64_t uniffi_opengrind_core_fn_constructor_coreclient_new(RustBuffer device_j
 uint64_t uniffi_opengrind_core_fn_method_coreclient_connect(uint64_t ptr
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_FN_METHOD_CORECLIENT_DEVICE_JSON
-#define UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_FN_METHOD_CORECLIENT_DEVICE_JSON
-uint64_t uniffi_opengrind_core_fn_method_coreclient_device_json(uint64_t ptr
-);
-#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_FN_METHOD_CORECLIENT_FETCH_MEDIA
 #define UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_FN_METHOD_CORECLIENT_FETCH_MEDIA
 uint64_t uniffi_opengrind_core_fn_method_coreclient_fetch_media(uint64_t ptr, RustBuffer url, uint64_t max_bytes
@@ -316,11 +311,6 @@ uint64_t uniffi_opengrind_core_fn_method_coreclient_fetch_media(uint64_t ptr, Ru
 #ifndef UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_FN_METHOD_CORECLIENT_REQUEST
 #define UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_FN_METHOD_CORECLIENT_REQUEST
 uint64_t uniffi_opengrind_core_fn_method_coreclient_request(uint64_t ptr, RustBuffer method, RustBuffer path, RustBuffer body, int8_t authenticated
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_FN_METHOD_CORECLIENT_SEND_WEBSOCKET_COMMAND
-#define UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_FN_METHOD_CORECLIENT_SEND_WEBSOCKET_COMMAND
-uint64_t uniffi_opengrind_core_fn_method_coreclient_send_websocket_command(uint64_t ptr, RustBuffer command_type, RustBuffer ref_id, RustBuffer payload_json
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_FN_METHOD_CORECLIENT_SET_ACTIVE
@@ -668,12 +658,6 @@ uint16_t uniffi_opengrind_core_checksum_method_coreclient_connect(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_CHECKSUM_METHOD_CORECLIENT_DEVICE_JSON
-#define UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_CHECKSUM_METHOD_CORECLIENT_DEVICE_JSON
-uint16_t uniffi_opengrind_core_checksum_method_coreclient_device_json(void
-    
-);
-#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_CHECKSUM_METHOD_CORECLIENT_FETCH_MEDIA
 #define UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_CHECKSUM_METHOD_CORECLIENT_FETCH_MEDIA
 uint16_t uniffi_opengrind_core_checksum_method_coreclient_fetch_media(void
@@ -683,12 +667,6 @@ uint16_t uniffi_opengrind_core_checksum_method_coreclient_fetch_media(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_CHECKSUM_METHOD_CORECLIENT_REQUEST
 #define UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_CHECKSUM_METHOD_CORECLIENT_REQUEST
 uint16_t uniffi_opengrind_core_checksum_method_coreclient_request(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_CHECKSUM_METHOD_CORECLIENT_SEND_WEBSOCKET_COMMAND
-#define UNIFFI_FFIDEF_UNIFFI_OPENGRIND_CORE_CHECKSUM_METHOD_CORECLIENT_SEND_WEBSOCKET_COMMAND
-uint16_t uniffi_opengrind_core_checksum_method_coreclient_send_websocket_command(void
     
 );
 #endif

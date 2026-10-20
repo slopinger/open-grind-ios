@@ -106,8 +106,6 @@ public final class AccountController {
             session?.receive(RealtimeEvent.decode(type: type, json: json))
         case .realtimeConnectionChanged(let isConnected):
             session?.isRealtimeConnected = isConnected
-        case .refreshFailed, .refreshRecovered:
-            break
         }
     }
 

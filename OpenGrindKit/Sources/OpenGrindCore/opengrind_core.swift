@@ -635,11 +635,6 @@ public protocol CoreClientProtocol: AnyObject, Sendable {
     func connect() async throws 
     
     /**
-     * The device identity in use, as JSON.
-     */
-    func deviceJson() async throws  -> String
-    
-    /**
      * Downloads a CDN file (`cdns.grindr.com`, CloudFront or GIPHY) with the
      * app's image loader headers. Fails if the body exceeds `max_bytes`.
      */
@@ -650,12 +645,6 @@ public protocol CoreClientProtocol: AnyObject, Sendable {
      * session unless `authenticated` is false.
      */
     func request(method: String, path: String, body: RequestBody, authenticated: Bool) async throws  -> HttpResponse
-    
-    /**
-     * Sends a websocket command; the reply arrives as a `<type>.response`
-     * event carrying `ref_id`.
-     */
-    func sendWebsocketCommand(commandType: String, refId: String, payloadJson: String) async throws 
     
     /**
      * Follows the app between foreground (`true`) and background, so token
@@ -775,25 +764,6 @@ open func connect()async throws   {
 }
     
     /**
-     * The device identity in use, as JSON.
-     */
-open func deviceJson()async throws  -> String  {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_opengrind_core_fn_method_coreclient_device_json(
-                        self.uniffiCloneHandle()
-                )
-            },
-            pollFunc: ffi_opengrind_core_rust_future_poll_rust_buffer,
-            completeFunc: ffi_opengrind_core_rust_future_complete_rust_buffer,
-            freeFunc: ffi_opengrind_core_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterString.lift,
-            errorHandler: FfiConverterTypeCoreError_lift
-        )
-}
-    
-    /**
      * Downloads a CDN file (`cdns.grindr.com`, CloudFront or GIPHY) with the
      * app's image loader headers. Fails if the body exceeds `max_bytes`.
      */
@@ -829,26 +799,6 @@ open func request(method: String, path: String, body: RequestBody, authenticated
             completeFunc: ffi_opengrind_core_rust_future_complete_rust_buffer,
             freeFunc: ffi_opengrind_core_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeHttpResponse_lift,
-            errorHandler: FfiConverterTypeCoreError_lift
-        )
-}
-    
-    /**
-     * Sends a websocket command; the reply arrives as a `<type>.response`
-     * event carrying `ref_id`.
-     */
-open func sendWebsocketCommand(commandType: String, refId: String, payloadJson: String)async throws   {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_opengrind_core_fn_method_coreclient_send_websocket_command(
-                        self.uniffiCloneHandle(),FfiConverterString.lower(commandType),FfiConverterString.lower(refId),FfiConverterString.lower(payloadJson)
-                )
-            },
-            pollFunc: ffi_opengrind_core_rust_future_poll_void,
-            completeFunc: ffi_opengrind_core_rust_future_complete_void,
-            freeFunc: ffi_opengrind_core_rust_future_free_void,
-            liftFunc: { $0 },
             errorHandler: FfiConverterTypeCoreError_lift
         )
 }
@@ -1590,15 +1540,6 @@ public enum AuthNotice: Equatable, Hashable {
      */
     case banned(message: String, reason: String?
     )
-    /**
-     * A background token refresh failed; the session is kept.
-     */
-    case refreshFailed(message: String, transient: Bool
-    )
-    /**
-     * A refresh succeeded after a failure.
-     */
-    case refreshRecovered
 
 
 
@@ -1625,11 +1566,6 @@ public struct FfiConverterTypeAuthNotice: FfiConverterRustBuffer {
         case 2: return .banned(message: try FfiConverterString.read(from: &buf), reason: try FfiConverterOptionString.read(from: &buf)
         )
         
-        case 3: return .refreshFailed(message: try FfiConverterString.read(from: &buf), transient: try FfiConverterBool.read(from: &buf)
-        )
-        
-        case 4: return .refreshRecovered
-        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -1647,16 +1583,6 @@ public struct FfiConverterTypeAuthNotice: FfiConverterRustBuffer {
             FfiConverterString.write(message, into: &buf)
             FfiConverterOptionString.write(reason, into: &buf)
             
-        
-        case let .refreshFailed(message,transient):
-            writeInt(&buf, Int32(3))
-            FfiConverterString.write(message, into: &buf)
-            FfiConverterBool.write(transient, into: &buf)
-            
-        
-        case .refreshRecovered:
-            writeInt(&buf, Int32(4))
-        
         }
     }
 }
@@ -2247,16 +2173,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_opengrind_core_checksum_method_coreclient_connect() != 25983) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_opengrind_core_checksum_method_coreclient_device_json() != 27600) {
-        return InitializationResult.apiChecksumMismatch
-    }
     if (uniffi_opengrind_core_checksum_method_coreclient_fetch_media() != 11512) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_opengrind_core_checksum_method_coreclient_request() != 33367) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_opengrind_core_checksum_method_coreclient_send_websocket_command() != 20396) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_opengrind_core_checksum_method_coreclient_set_active() != 57286) {

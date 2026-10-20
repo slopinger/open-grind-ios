@@ -15,10 +15,11 @@ use std::sync::{Arc, LazyLock, Mutex};
 
 use grindr::{
     AuthEvent, BanInfo, BanKind, BlockKind, Credentials, DeviceInfo, GrindrClient, GrindrError,
-    MediaFetcher, MediaRequest, Method, Restriction, Session, WsCommand, WsConnectionState,
+    MediaFetcher, MediaRequest, Method, Restriction, Session, WsConnectionState,
 };
+use serde::de::DeserializeOwned;
 use tokio::runtime::Runtime;
-use tokio::sync::broadcast::error::RecvError;
+use tokio::sync::broadcast::{self, error::RecvError};
 use tokio::task::JoinHandle;
 
 uniffi::setup_scaffolding!();
@@ -38,12 +39,7 @@ static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| {
 async fn on_runtime<T: Send + 'static>(
     future: impl Future<Output = Result<T, CoreError>> + Send + 'static,
 ) -> Result<T, CoreError> {
-    RUNTIME
-        .spawn(future)
-        .await
-        .map_err(|error| CoreError::Internal {
-            message: error.to_string(),
-        })?
+    RUNTIME.spawn(future).await.map_err(internal)?
 }
 
 /// The Grindr Android app version the transport presents as.
@@ -165,6 +161,34 @@ fn invalid(what: &str, error: impl std::fmt::Display) -> CoreError {
     }
 }
 
+fn internal(error: impl std::fmt::Display) -> CoreError {
+    CoreError::Internal {
+        message: error.to_string(),
+    }
+}
+
+/// Parses JSON from Swift; malformed input is the caller's mistake.
+fn parse_json<T: DeserializeOwned>(what: &str, json: &str) -> Result<T, CoreError> {
+    serde_json::from_str(json).map_err(|e| invalid(what, e))
+}
+
+/// Calls `forward` with every value sent on `receiver` until it closes,
+/// skipping over values missed while the listener lagged behind.
+fn forward_each<T: Clone + Send + 'static>(
+    mut receiver: broadcast::Receiver<T>,
+    forward: impl Fn(T) + Send + 'static,
+) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        loop {
+            match receiver.recv().await {
+                Ok(value) => forward(value),
+                Err(RecvError::Lagged(_)) => continue,
+                Err(RecvError::Closed) => break,
+            }
+        }
+    })
+}
+
 /// An account restriction carried in the session. The session stays valid.
 #[derive(Debug, Clone, PartialEq, uniffi::Enum)]
 pub enum AccountRestriction {
@@ -247,10 +271,6 @@ pub enum AuthNotice {
         message: String,
         reason: Option<String>,
     },
-    /// A background token refresh failed; the session is kept.
-    RefreshFailed { message: String, transient: bool },
-    /// A refresh succeeded after a failure.
-    RefreshRecovered,
 }
 
 impl AuthNotice {
@@ -261,11 +281,7 @@ impl AuthNotice {
                 message: info.message,
                 reason: info.reason,
             },
-            AuthEvent::RefreshFailed { message, kind, .. } => Self::RefreshFailed {
-                message,
-                transient: kind.is_transient(),
-            },
-            AuthEvent::RefreshRecovered => Self::RefreshRecovered,
+            // Refresh failures keep the session; the transport retries them.
             _ => return None,
         })
     }
@@ -316,12 +332,10 @@ impl CoreClient {
         device_json: String,
         credentials_json: Option<String>,
     ) -> Result<Arc<Self>, CoreError> {
-        let device: DeviceInfo =
-            serde_json::from_str(&device_json).map_err(|e| invalid("device", e))?;
+        let device: DeviceInfo = parse_json("device", &device_json)?;
         let session = credentials_json
-            .map(|json| serde_json::from_str::<Credentials>(&json))
-            .transpose()
-            .map_err(|e| invalid("credentials", e))?
+            .map(|json| parse_json::<Credentials>("credentials", &json))
+            .transpose()?
             .map(|credentials| Session {
                 credentials,
                 token: None,
@@ -361,18 +375,9 @@ impl CoreClient {
             }
         }));
 
-        let mut events = self.client.ws_receiver();
         let target = Arc::clone(&listener);
-        tasks.push(tokio::spawn(async move {
-            loop {
-                match events.recv().await {
-                    Ok(event) => {
-                        target.websocket_event(event.event_type, event.payload.to_string())
-                    }
-                    Err(RecvError::Lagged(_)) => continue,
-                    Err(RecvError::Closed) => break,
-                }
-            }
+        tasks.push(forward_each(self.client.ws_receiver(), move |event| {
+            target.websocket_event(event.event_type, event.payload.to_string())
         }));
 
         let mut states = self.client.connection_state();
@@ -387,33 +392,16 @@ impl CoreClient {
             }
         }));
 
-        let mut notices = self.client.auth_event_receiver();
-        tasks.push(tokio::spawn(async move {
-            loop {
-                match notices.recv().await {
-                    Ok(event) => {
-                        if let Some(notice) = AuthNotice::from_event(event) {
-                            listener.auth_notice(notice);
-                        }
-                    }
-                    Err(RecvError::Lagged(_)) => continue,
-                    Err(RecvError::Closed) => break,
+        tasks.push(forward_each(
+            self.client.auth_event_receiver(),
+            move |event| {
+                if let Some(notice) = AuthNotice::from_event(event) {
+                    listener.auth_notice(notice);
                 }
-            }
-        }));
+            },
+        ));
 
         *self.listener_tasks.lock().expect("listener lock") = tasks;
-    }
-
-    /// The device identity in use, as JSON.
-    pub async fn device_json(&self) -> Result<String, CoreError> {
-        let client = self.client.clone();
-        on_runtime(async move {
-            serde_json::to_string(&client.current_device().await).map_err(|e| CoreError::Internal {
-                message: e.to_string(),
-            })
-        })
-        .await
     }
 
     /// Signs in with email and password. `geohash` tags the sign-in with an
@@ -442,9 +430,8 @@ impl CoreClient {
     /// cannot be correlated with this one.
     pub async fn sign_out(&self, new_device_json: Option<String>) -> Result<(), CoreError> {
         let device = new_device_json
-            .map(|json| serde_json::from_str::<DeviceInfo>(&json))
-            .transpose()
-            .map_err(|e| invalid("device", e))?;
+            .map(|json| parse_json::<DeviceInfo>("device", &json))
+            .transpose()?;
         let client = self.client.clone();
         on_runtime(async move {
             match device {
@@ -472,9 +459,7 @@ impl CoreClient {
         builder = match body {
             RequestBody::Empty => builder,
             RequestBody::Json { json } => {
-                let value: serde_json::Value =
-                    serde_json::from_str(&json).map_err(|e| invalid("body", e))?;
-                builder.json(&value)
+                builder.json(&parse_json::<serde_json::Value>("body", &json)?)
             }
             RequestBody::Bytes {
                 content_type,
@@ -488,7 +473,7 @@ impl CoreClient {
             let response = builder.send().await?;
             Ok(HttpResponse {
                 status: response.status,
-                body: response.body.to_vec(),
+                body: response.body,
             })
         })
         .await
@@ -510,7 +495,8 @@ impl CoreClient {
             Ok(MediaResult {
                 status: response.status,
                 content_type: response.content_type,
-                body: response.body.to_vec(),
+                // Reuses the buffer when nothing else holds it.
+                body: Vec::from(response.body),
             })
         })
         .await
@@ -523,32 +509,6 @@ impl CoreClient {
         on_runtime(async move {
             client.connect().await;
             Ok(())
-        })
-        .await
-    }
-
-    /// Sends a websocket command; the reply arrives as a `<type>.response`
-    /// event carrying `ref_id`.
-    pub async fn send_websocket_command(
-        &self,
-        command_type: String,
-        ref_id: String,
-        payload_json: String,
-    ) -> Result<(), CoreError> {
-        let payload: serde_json::Value =
-            serde_json::from_str(&payload_json).map_err(|e| invalid("payload", e))?;
-        let sender = self.client.ws_sender();
-        on_runtime(async move {
-            sender
-                .send(WsCommand {
-                    r#type: command_type,
-                    ref_id,
-                    payload,
-                })
-                .await
-                .map_err(|_| CoreError::Network {
-                    message: "the websocket is closed".to_owned(),
-                })
         })
         .await
     }

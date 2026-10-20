@@ -15,8 +15,6 @@ public enum RealtimeEvent: Sendable, Hashable {
     case profileViewed(by: ProfileID, photoHash: String?, totalViews: Int?)
     /// The inbox should be fetched again.
     case inboxInvalidated
-    /// A reply to a command sent with `refID`.
-    case commandResponse(type: String, refID: String, status: Int?, payload: Data)
     /// An event this version does not handle.
     case other(type: String)
 
@@ -63,13 +61,7 @@ public enum RealtimeEvent: Sendable, Hashable {
         case "chat.v1.cache_bomb.inbox":
             return .inboxInvalidated
         default:
-            guard type.hasSuffix(".response"), let reply = try? JSON.decode(Reply.self, from: json) else {
-                return nil
-            }
-            return .commandResponse(
-                type: String(type.dropLast(".response".count)), refID: reply.ref ?? "",
-                status: reply.status,
-                payload: json)
+            return nil
         }
     }
 
@@ -152,10 +144,5 @@ public enum RealtimeEvent: Sendable, Hashable {
 
         var viewedCount: Int?
         var mostRecent: Viewer?
-    }
-
-    private struct Reply: Decodable {
-        var ref: String?
-        var status: Int?
     }
 }

@@ -51,8 +51,6 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
         emit(.realtimeConnectionChanged(isConnected: true))
     }
 
-    public func sendRealtimeCommand(type: String, refID: String, payload: Data) async throws {}
-
     public func setActive(_ isActive: Bool) {}
 
     public func fetchMedia(at url: URL, maxBytes: Int) async throws -> MediaPayload {
