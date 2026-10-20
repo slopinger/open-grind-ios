@@ -1,0 +1,82 @@
+name: iOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: Build, test and screenshot
+    runs-on: macos-26
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode
+        run: xcodebuild -version
+
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin
+
+      - name: Cache Rust builds
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            core/target
+          key: rust-${{ runner.os }}-${{ hashFiles('core/Cargo.lock', 'core/src/**') }}
+          restore-keys: rust-${{ runner.os }}-
+
+      - name: Build the Rust bridge
+        run: scripts/build-core-xcframework.sh
+
+      - name: Test OpenGrindKit on macOS
+        run: swift test --package-path OpenGrindKit
+
+      - name: Build for iPhone
+        run: >
+          xcodebuild build -project OpenGrind.xcodeproj -scheme OpenGrind
+          -destination 'generic/platform=iOS' -derivedDataPath build/device
+          CODE_SIGNING_ALLOWED=NO
+
+      - name: Choose a simulator
+        run: |
+          udid=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          runtimes = json.load(sys.stdin)["devices"]
+          ios = sorted((r for r in runtimes if "iOS" in r), key=lambda r: [int(p) for p in r.split("iOS-")[1].split("-")])
+          phones = [d for d in runtimes[ios[-1]] if d["name"].startswith("iPhone")]
+          pro = [d for d in phones if d["name"].endswith(" Pro")]
+          print((pro or phones)[-1]["udid"])')
+          echo "SIMULATOR=$udid" >> "$GITHUB_ENV"
+          xcrun simctl list devices | grep "$udid"
+
+      - name: Test the app
+        run: >
+          xcodebuild test -project OpenGrind.xcodeproj -scheme OpenGrind
+          -destination "id=$SIMULATOR" -derivedDataPath build/simulator
+          -resultBundlePath build/Tests.xcresult
+
+      - name: Export screenshots
+        if: always()
+        run: |
+          if [ -d build/Tests.xcresult ]; then
+            xcrun xcresulttool export attachments --path build/Tests.xcresult --output-path build/screenshots
+          fi
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: build/screenshots
+          if-no-files-found: ignore
