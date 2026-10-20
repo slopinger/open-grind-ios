@@ -50,23 +50,24 @@ struct InboxView: View {
     }
 
     private var content: some View {
-        LoadStateView(inbox.state, isEmpty: inbox.conversations.isEmpty) {
+        let visible = visibleConversations
+        return LoadStateView(inbox.state, isEmpty: inbox.conversations.isEmpty) {
             await inbox.refresh()
         } content: {
-            list
+            list(visible)
                 .overlay {
                     if inbox.conversations.isEmpty {
                         emptyState
-                    } else if visibleConversations.isEmpty {
+                    } else if visible.isEmpty {
                         ContentUnavailableView.search(text: searchText)
                     }
                 }
         }
     }
 
-    private var list: some View {
+    private func list(_ conversations: [Conversation]) -> some View {
         List {
-            ForEach(visibleConversations) { conversation in
+            ForEach(conversations) { conversation in
                 row(conversation)
                     .task { await inbox.loadMoreIfNeeded(after: conversation) }
             }
@@ -78,7 +79,25 @@ struct InboxView: View {
         }
         .listStyle(.plain)
         .refreshable { await inbox.refresh() }
-        .animation(.default, value: visibleConversations.map(\.id))
+        .animation(.default, value: conversations.map(\.id))
+    }
+
+    private func pinButton(_ conversation: Conversation) -> some View {
+        Button(
+            conversation.isPinned ? "Unpin" : "Pin",
+            systemImage: conversation.isPinned ? "pin.slash" : "pin"
+        ) {
+            Task { await inbox.setPinned(conversation, !conversation.isPinned) }
+        }
+    }
+
+    private func muteButton(_ conversation: Conversation) -> some View {
+        Button(
+            conversation.isMuted ? "Unmute" : "Mute",
+            systemImage: conversation.isMuted ? "bell" : "bell.slash"
+        ) {
+            Task { await inbox.setMuted(conversation, !conversation.isMuted) }
+        }
     }
 
     @ViewBuilder
@@ -100,36 +119,16 @@ struct InboxView: View {
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button("Delete", systemImage: "trash", role: .destructive) { pendingDelete = conversation }
-            Button(
-                conversation.isMuted ? "Unmute" : "Mute",
-                systemImage: conversation.isMuted ? "bell" : "bell.slash"
-            ) {
-                Task { await inbox.setMuted(conversation, !conversation.isMuted) }
-            }
-            .tint(.indigo)
+            muteButton(conversation)
+                .tint(.indigo)
         }
         .swipeActions(edge: .leading) {
-            Button(
-                conversation.isPinned ? "Unpin" : "Pin",
-                systemImage: conversation.isPinned ? "pin.slash" : "pin"
-            ) {
-                Task { await inbox.setPinned(conversation, !conversation.isPinned) }
-            }
-            .tint(.orange)
+            pinButton(conversation)
+                .tint(.orange)
         }
         .contextMenu {
-            Button(
-                conversation.isPinned ? "Unpin" : "Pin",
-                systemImage: conversation.isPinned ? "pin.slash" : "pin"
-            ) {
-                Task { await inbox.setPinned(conversation, !conversation.isPinned) }
-            }
-            Button(
-                conversation.isMuted ? "Unmute" : "Mute",
-                systemImage: conversation.isMuted ? "bell" : "bell.slash"
-            ) {
-                Task { await inbox.setMuted(conversation, !conversation.isMuted) }
-            }
+            pinButton(conversation)
+            muteButton(conversation)
             if let otherID, !conversation.isLocked {
                 Button("View Profile", systemImage: "person.crop.circle") {
                     path.append(.profile(otherID))

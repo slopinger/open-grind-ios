@@ -9,10 +9,8 @@ struct ChatScreen: View {
     @Environment(AccountSession.self) private var session
 
     var body: some View {
-        let conversationID = Conversation.id(between: session.profileID, and: profileID)
-        ChatContent(
-            chat: session.chat(with: profileID, name: session.inbox.conversation(conversationID)?.name),
-            conversation: session.inbox.conversation(conversationID))
+        let conversation = session.inbox.conversation(Conversation.id(between: session.profileID, and: profileID))
+        ChatContent(chat: session.chat(with: profileID, name: conversation?.name), conversation: conversation)
     }
 }
 
@@ -114,7 +112,10 @@ private struct ChatContent: View {
     }
 
     private var transcript: some View {
-        ScrollViewReader { proxy in
+        // Read once per update: each row needs its neighbours and the read receipt.
+        let items = chat.items
+        let lastReadOutgoingID = chat.lastReadOutgoingID
+        return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 2) {
                     if chat.hasOlderMessages {
@@ -123,9 +124,9 @@ private struct ChatContent: View {
                             .task { await chat.loadOlder() }
                             .accessibilityLabel("Loading earlier messages")
                     }
-                    ForEach(Array(chat.items.enumerated()), id: \.element.id) { index, item in
-                        let previous = index > 0 ? chat.items[index - 1] : nil
-                        let next = index + 1 < chat.items.count ? chat.items[index + 1] : nil
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        let previous = index > 0 ? items[index - 1] : nil
+                        let next = index + 1 < items.count ? items[index + 1] : nil
                         if previous.map({
                             !Calendar.current.isDate($0.message.date, inSameDayAs: item.message.date)
                         })
@@ -145,7 +146,7 @@ private struct ChatContent: View {
                                 $0.message.senderID != item.message.senderID
                                     || $0.message.date.timeIntervalSince(item.message.date) > 600
                             } ?? true,
-                            showsReadReceipt: item.id == chat.lastReadOutgoingID,
+                            showsReadReceipt: item.id == lastReadOutgoingID,
                             openImage: { viewer = ViewerItem(url: $0) }
                         )
                         .id(item.id)
