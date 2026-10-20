@@ -32,7 +32,7 @@ struct ChatPhotoEncoderTests {
         let image = try #require(context.makeImage())
         let data = NSMutableData()
         let destination = try #require(
-            CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil))
+            CGImageDestinationCreateWithData(data as CFMutableData, UTType.jpeg.identifier as CFString, 1, nil))
         let metadata: [CFString: Any] = [
             kCGImagePropertyGPSDictionary: [
                 kCGImagePropertyGPSLatitude: latitude, kCGImagePropertyGPSLatitudeRef: "N",

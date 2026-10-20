@@ -174,9 +174,9 @@ private struct MessageBubble: View {
         case .unsent:
             textBubble(Text("Message unsent").italic(), isMuted: true)
         case .image(let url, let width, let height):
-            photo(url: url, aspectRatio: aspectRatio(width, height))
+            photo(url: url, aspectRatio: Self.ratio(width, height))
         case .giphy(let url, let width, let height):
-            photo(url: url, aspectRatio: aspectRatio(width, height), opensViewer: false)
+            photo(url: url, aspectRatio: Self.ratio(width, height), opensViewer: false)
         case .gaymoji(let hash):
             RemoteImage(url: MediaURL.gaymoji(hash), pointSize: 120, contentMode: .fit)
                 .frame(width: 120, height: 120)
@@ -210,7 +210,8 @@ private struct MessageBubble: View {
         case .album(_, let isViewable):
             unsupportedBubble(
                 "Album", systemImage: "photo.stack",
-                detail: isViewable ? "Albums aren't supported yet" : "Shared privately")
+                detail: isViewable
+                    ? LocalizedStringKey("Albums aren't supported yet") : LocalizedStringKey("Shared privately"))
         case .unsupported(let kind):
             if kind == .image {
                 // A photo still being uploaded without a local copy.
@@ -250,7 +251,7 @@ private struct MessageBubble: View {
         .accessibilityLabel(opensViewer ? "Photo" : "GIF")
     }
 
-    private func aspectRatio(_ width: Int?, _ height: Int?) -> CGFloat {
+    private static func ratio(_ width: Int?, _ height: Int?) -> CGFloat {
         guard let width, let height, width > 0, height > 0 else { return 1 }
         // Very tall images are cropped rather than filling the screen.
         return max(CGFloat(width) / CGFloat(height), 2 / 3)

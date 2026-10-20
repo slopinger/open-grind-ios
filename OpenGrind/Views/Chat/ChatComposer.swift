@@ -94,7 +94,7 @@ enum ChatPhotoEncoder {
         let output = NSMutableData()
         guard
             let destination = CGImageDestinationCreateWithData(
-                output, UTType.jpeg.identifier as CFString, 1, nil)
+                output as CFMutableData, UTType.jpeg.identifier as CFString, 1, nil)
         else { return nil }
         // Only the pixels are written: no EXIF, GPS or TIFF dictionaries.
         CGImageDestinationAddImage(

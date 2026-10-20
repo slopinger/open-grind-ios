@@ -232,7 +232,7 @@ struct ConversationRow: View {
                 HStack(alignment: .top, spacing: 6) {
                     Text(previewText)
                         .font(.subheadline)
-                        .foregroundStyle(isUnread ? .primary : .secondary)
+                        .foregroundStyle(isUnread ? Color.primary : Color.secondary)
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if conversation.isPinned {

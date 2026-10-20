@@ -75,7 +75,7 @@ struct MeView: View {
                 }
             }
             .confirmationDialog(
-                app.isDemo ? "Leave the Demo?" : "Sign Out?", isPresented: $isConfirmingSignOut,
+                app.isDemo ? Text("Leave the Demo?") : Text("Sign Out?"), isPresented: $isConfirmingSignOut,
                 titleVisibility: .visible
             ) {
                 Button(app.isDemo ? "Leave Demo" : "Sign Out", role: .destructive) {

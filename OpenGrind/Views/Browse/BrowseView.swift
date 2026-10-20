@@ -4,14 +4,14 @@ import SwiftUI
 /// The grid of profiles nearby.
 struct BrowseView: View {
     @Environment(AccountSession.self) private var session
-    @State private var path: [Route] = []
     @State private var isShowingFilters = false
     @Namespace private var transition
 
     private var browse: BrowseModel { session.browse }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        // Untyped: the stack holds grid tiles as well as routes.
+        NavigationStack {
             content
                 .navigationTitle("Nearby")
                 .toolbar {

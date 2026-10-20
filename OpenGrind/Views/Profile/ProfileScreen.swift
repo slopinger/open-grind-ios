@@ -23,7 +23,7 @@ struct ProfileScreen: View {
         .onAppear {
             if model == nil {
                 model = ProfileModel(
-                    profileID: profileID, session: session, preview: preview.map(Profile.init))
+                    profileID: profileID, session: session, preview: preview.map { Profile($0) })
             }
         }
     }
@@ -95,9 +95,12 @@ private struct ProfileContent: View {
         } message: {
             Text("They won't appear in your grid anymore. They can still message you.")
         }
-        .sheet(isPresented: $isReporting) {
-            if hasBlocked { dismiss() }
-        } content: {
+        .sheet(
+            isPresented: $isReporting,
+            onDismiss: {
+                if hasBlocked { dismiss() }
+            }
+        ) {
             ReportSheet(name: name) { report, alsoBlock in
                 try await model.report(report)
                 if alsoBlock {
@@ -183,7 +186,7 @@ private struct ProfileContent: View {
                     Button {
                         Task { await model.sendTap(type) }
                     } label: {
-                        Text(verbatim: "\(type.emoji) ") + Text(type.localizedName)
+                        Text(verbatim: "\(type.emoji) \(type.localizedName)")
                     }
                 }
             } label: {
