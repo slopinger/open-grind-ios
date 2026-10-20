@@ -34,6 +34,10 @@ final class DemoTourTests: XCTestCase {
         app.buttons["Filters"].tap()
         XCTAssertTrue(app.navigationBars["Filters"].waitForExistence(timeout: 5))
         snapshot(app, "04-filters")
+        app.buttons["From"].firstMatch.tap()
+        XCTAssertTrue(app.pickerWheels.firstMatch.waitForExistence(timeout: 5), "Tapping a number row opens a wheel")
+        snapshot(app, "17-filter-wheel")
+        app.buttons["From"].firstMatch.tap()
         let tags = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Tags'")).firstMatch
         for _ in 0..<6 where !tags.isHittable { app.swipeUp() }
         tags.tap()

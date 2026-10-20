@@ -7,6 +7,7 @@ struct FilterSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var filters: BrowseFilters
+    @State private var openWheel: String?
 
     init(filters: BrowseFilters, apply: @escaping (BrowseFilters) -> Void) {
         self.apply = apply
@@ -26,27 +27,27 @@ struct FilterSheet: View {
 
                 Section("Age") {
                     RangePicker(
-                        range: $filters.ages, bounds: BrowseFilters.ageBounds,
-                        values: Array(BrowseFilters.ageBounds)
+                        "age", range: $filters.ages, bounds: BrowseFilters.ageBounds,
+                        values: Array(BrowseFilters.ageBounds), openWheel: $openWheel
                     ) { Text($0, format: .number) }
                 }
 
                 Section("Height") {
                     RangePicker(
-                        range: heightRange,
+                        "height", range: heightRange,
                         bounds: Int(
                             BrowseFilters.heightBounds.lowerBound)...Int(BrowseFilters.heightBounds.upperBound),
-                        values: Array(stride(from: 121, through: 241, by: 2))
+                        values: Array(stride(from: 121, through: 241, by: 2)), openWheel: $openWheel
                     ) { Text(Formatting.height(Double($0))) }
                 }
 
                 Section("Weight") {
                     RangePicker(
-                        range: weightRange,
+                        "weight", range: weightRange,
                         bounds: Int(
                             BrowseFilters.weightBounds.lowerBound / 1000)...Int(
                                 BrowseFilters.weightBounds.upperBound / 1000),
-                        values: Array(stride(from: 40, through: 272, by: 2))
+                        values: Array(stride(from: 40, through: 272, by: 2)), openWheel: $openWheel
                     ) { Text(Formatting.weight(Double($0) * 1000)) }
                 }
 
@@ -117,28 +118,48 @@ struct FilterSheet: View {
     }
 }
 
-/// "From" and "To" pickers for a range; the outer bounds read "Any".
-private struct RangePicker<Label: View>: View {
+/// "From" and "To" rows for a range, each with a wheel; the outer bounds read "Any".
+private struct RangePicker: View {
+    let id: String
     @Binding var range: ClosedRange<Int>
     let bounds: ClosedRange<Int>
     let values: [Int]
-    @ViewBuilder let label: (Int) -> Label
+    @Binding var openWheel: String?
+    let label: (Int) -> Text
+
+    init(
+        _ id: String, range: Binding<ClosedRange<Int>>, bounds: ClosedRange<Int>, values: [Int],
+        openWheel: Binding<String?>, label: @escaping (Int) -> Text
+    ) {
+        self.id = id
+        _range = range
+        self.bounds = bounds
+        self.values = values
+        _openWheel = openWheel
+        self.label = label
+    }
 
     var body: some View {
-        Picker("From", selection: lower) {
+        WheelPickerRow(
+            "From", value: text(lower.wrappedValue), selection: lower, isExpanded: $openWheel.isOpen("\(id).from")
+        ) {
             Text("Any").tag(bounds.lowerBound)
-            ForEach(values.filter { $0 > bounds.lowerBound && $0 <= range.upperBound }, id: \.self) {
-                value in
+            ForEach(values.filter { $0 > bounds.lowerBound && $0 <= range.upperBound }, id: \.self) { value in
                 label(value).tag(value)
             }
         }
-        Picker("To", selection: upper) {
-            ForEach(values.filter { $0 >= range.lowerBound && $0 < bounds.upperBound }, id: \.self) {
-                value in
+        WheelPickerRow(
+            "To", value: text(upper.wrappedValue), selection: upper, isExpanded: $openWheel.isOpen("\(id).to")
+        ) {
+            ForEach(values.filter { $0 >= range.lowerBound && $0 < bounds.upperBound }, id: \.self) { value in
                 label(value).tag(value)
             }
             Text("Any").tag(bounds.upperBound)
         }
+    }
+
+    private func text(_ value: Int) -> Text {
+        value == bounds.lowerBound || value == bounds.upperBound ? Text("Any") : label(value)
     }
 
     private var lower: Binding<Int> {

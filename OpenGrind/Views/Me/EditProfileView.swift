@@ -8,6 +8,7 @@ struct EditProfileView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var edit: ProfileEdit
+    @State private var openWheel: String?
     @State private var isSaving = false
     @State private var isConfirmingDiscard = false
     @State private var failure: Failure?
@@ -85,14 +86,20 @@ struct EditProfileView: View {
 
     private var statsSection: some View {
         Section("Stats") {
-            Picker("Age", selection: $edit.age) {
+            WheelPickerRow(
+                "Age", value: edit.age.map { Text($0, format: .number) } ?? Text("Not Specified"),
+                selection: $edit.age, isExpanded: $openWheel.isOpen("age")
+            ) {
                 Text("Not Specified").tag(Int?.none)
                 ForEach(ProfileEdit.ageRange, id: \.self) { age in
                     Text(age, format: .number).tag(Int?.some(age))
                 }
             }
             Toggle("Show Age", isOn: $edit.showsAge)
-            Picker("Height", selection: heightBinding) {
+            WheelPickerRow(
+                "Height", value: edit.height.map { Text(Formatting.height($0)) } ?? Text("Not Specified"),
+                selection: heightBinding, isExpanded: $openWheel.isOpen("height")
+            ) {
                 Text("Not Specified").tag(Int?.none)
                 ForEach(
                     Int(BrowseFilters.heightBounds.lowerBound)...Int(BrowseFilters.heightBounds.upperBound),
@@ -102,14 +109,15 @@ struct EditProfileView: View {
                     Text(Formatting.height(Double(centimeters))).tag(Int?.some(centimeters))
                 }
             }
-            .pickerStyle(.navigationLink)
-            Picker("Weight", selection: weightBinding) {
+            WheelPickerRow(
+                "Weight", value: edit.weight.map { Text(Formatting.weight($0)) } ?? Text("Not Specified"),
+                selection: weightBinding, isExpanded: $openWheel.isOpen("weight")
+            ) {
                 Text("Not Specified").tag(Int?.none)
                 ForEach(WeightOption.all, id: \.grams) { option in
                     Text(Formatting.weight(Double(option.grams))).tag(Int?.some(option.grams))
                 }
             }
-            .pickerStyle(.navigationLink)
             AttributePicker(title: "Body Type", selection: $edit.bodyType)
             AttributePicker(title: "Position", selection: $edit.position)
             Toggle("Show Position", isOn: $edit.showsPosition)

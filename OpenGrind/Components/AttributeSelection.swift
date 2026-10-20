@@ -69,7 +69,8 @@ struct MultiSelectList<Attribute: ProfileAttribute>: View {
     }
 }
 
-/// A picker for one profile option, or none.
+/// A picker for one profile option, or none. Opens a list like the multiple
+/// choice rows, so every option row in a form behaves the same.
 struct AttributePicker<Attribute: ProfileAttribute>: View {
     let title: LocalizedStringKey
     @Binding var selection: Attribute?
@@ -82,5 +83,6 @@ struct AttributePicker<Attribute: ProfileAttribute>: View {
                 Text(option.localizedName).tag(Attribute?.some(option))
             }
         }
+        .pickerStyle(.navigationLink)
     }
 }
