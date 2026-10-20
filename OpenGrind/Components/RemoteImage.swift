@@ -48,12 +48,16 @@ struct ImagePlaceholder: View {
         Rectangle()
             .fill(.fill.tertiary)
             .overlay {
-                Image(systemName: "person.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .padding(22)
-                    .frame(maxWidth: 120, maxHeight: 120)
-                    .foregroundStyle(.tertiary)
+                // About half the frame, whether it's an avatar or a full photo.
+                GeometryReader { proxy in
+                    let side = min(min(proxy.size.width, proxy.size.height) * 0.5, 120)
+                    Image(systemName: "person.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: side, height: side)
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
             .accessibilityHidden(true)
     }
