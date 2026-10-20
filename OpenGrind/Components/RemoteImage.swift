@@ -15,10 +15,15 @@ struct RemoteImage: View {
     @State private var image: UIImage?
     @State private var loadedURL: URL?
 
+    private var pixels: Int { Int((pointSize * displayScale).rounded(.up)) }
+
     var body: some View {
+        // Already decoded images show at once, e.g. when scrolling back to them.
+        let shown =
+            loadedURL == url ? image : url.flatMap { pipeline?.cachedImage(at: $0, maxPixelSize: pixels) }
         ZStack {
-            if let image, loadedURL == url {
-                Image(uiImage: image)
+            if let shown {
+                Image(uiImage: shown)
                     .resizable()
                     .aspectRatio(contentMode: contentMode)
                     .transition(.opacity)
@@ -33,7 +38,6 @@ struct RemoteImage: View {
                 loadedURL = nil
                 return
             }
-            let pixels = Int((pointSize * displayScale).rounded(.up))
             if let loaded = try? await pipeline.image(at: url, maxPixelSize: pixels) {
                 image = loaded
                 loadedURL = url

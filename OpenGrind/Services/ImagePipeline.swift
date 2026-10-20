@@ -13,7 +13,8 @@ actor ImagePipeline {
     static let maxDownloadBytes = 25 * 1024 * 1024
 
     private let transport: any GrindrTransport
-    private let memory = NSCache<NSString, UIImage>()
+    /// NSCache is thread-safe, so ``cachedImage(at:maxPixelSize:)`` reads it without the actor.
+    private nonisolated(unsafe) let memory = NSCache<NSString, UIImage>()
     private var inFlight: [String: Task<UIImage, any Error>] = [:]
     private let directory: URL
 
@@ -27,13 +28,19 @@ actor ImagePipeline {
         }
     }
 
+    /// The image at `url` if it is decoded at this size already, to show it without waiting.
+    nonisolated func cachedImage(at url: URL, maxPixelSize: Int) -> UIImage? {
+        memory.object(forKey: Self.memoryKey(Self.cacheKey(url), maxPixelSize))
+    }
+
     /// The image at `url`, scaled so its longer side is at most `maxPixelSize` pixels.
     func image(at url: URL, maxPixelSize: Int) async throws -> UIImage {
-        let key = "\(Self.cacheKey(url))@\(maxPixelSize)" as NSString
+        let fileName = Self.cacheKey(url)
+        let key = Self.memoryKey(fileName, maxPixelSize)
         if let image = memory.object(forKey: key) { return image }
         if let task = inFlight[key as String] { return try await task.value }
 
-        let file = directory.appending(path: Self.cacheKey(url))
+        let file = directory.appending(path: fileName)
         let transport = transport
         let task = Task.detached(priority: .userInitiated) { () throws -> UIImage in
             let data: Data
@@ -69,6 +76,10 @@ actor ImagePipeline {
         components?.query = nil
         let stable = components?.string ?? url.absoluteString
         return SHA256.hash(data: Data(stable.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func memoryKey(_ fileName: String, _ maxPixelSize: Int) -> NSString {
+        "\(fileName)@\(maxPixelSize)" as NSString
     }
 
     private static func downsample(_ data: Data, maxPixelSize: Int) -> UIImage? {
