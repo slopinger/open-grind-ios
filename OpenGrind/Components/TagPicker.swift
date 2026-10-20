@@ -54,20 +54,18 @@ struct TagPickerList: View {
                 LoadingView()
             }
         }
-        .navigationTitle("Tags")
-        .navigationBarTitleDisplayMode(.inline)
+        .checklistPage("Tags", selection: selection)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search Tags")
-        .sensoryFeedback(.selection, trigger: selection)
         .task { await catalogs.loadTags() }
     }
 
     @ViewBuilder
     private func list(_ catalog: ProfileTagCatalog) -> some View {
         List {
-            if query.isEmpty, !selection.isEmpty || limit != nil {
+            if query.isEmpty {
                 Section {
                     if !selection.isEmpty {
-                        Button("Clear Selection", role: .destructive) { selection.removeAll() }
+                        ClearSelectionButton { selection.removeAll() }
                     }
                 } footer: {
                     if let limit {
@@ -97,26 +95,12 @@ struct TagPickerList: View {
     private func row(_ tag: ProfileTag) -> some View {
         let isSelected = selection.contains(tag.key)
         let isFull = limit.map { selection.count >= $0 } ?? false
-        return Button {
+        return CheckRow(title: tag.text, isSelected: isSelected, isEnabled: isSelected || !isFull) {
             if isSelected {
                 selection.remove(tag.key)
             } else {
                 selection.insert(tag.key)
             }
-        } label: {
-            HStack {
-                Text(tag.text)
-                    .foregroundStyle(isFull && !isSelected ? Color.secondary : Color.primary)
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.tint)
-                }
-            }
-            .contentShape(.rect)
         }
-        .disabled(isFull && !isSelected)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

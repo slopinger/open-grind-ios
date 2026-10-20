@@ -15,6 +15,7 @@ struct ChoiceRow: View {
     @Binding var selection: [Int]
     let choices: [Choice]
     let limit: Int
+    var emptyLabel: LocalizedStringKey = "Not Specified"
 
     var body: some View {
         NavigationLink {
@@ -23,7 +24,7 @@ struct ChoiceRow: View {
             LabeledContent(title) {
                 let names = selection.compactMap { id in choices.first { $0.id == id }?.name }
                 if names.isEmpty {
-                    Text("Not Specified")
+                    Text(emptyLabel)
                 } else {
                     Text(names.formatted(.list(type: .and)))
                         .lineLimit(1)
@@ -53,39 +54,23 @@ struct ChoiceList: View {
             }
             if !selection.isEmpty {
                 Section {
-                    Button("Clear Selection", role: .destructive) { selection.removeAll() }
+                    ClearSelectionButton { selection.removeAll() }
                 }
             }
         }
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.inline)
-        .sensoryFeedback(.selection, trigger: selection)
+        .checklistPage(title, selection: selection)
     }
 
     private func row(_ choice: Choice) -> some View {
         let isSelected = selection.contains(choice.id)
         let isAvailable = isSelected || (selection.count < limit && !isExcluded(choice))
-        return Button {
+        return CheckRow(title: choice.name, isSelected: isSelected, isEnabled: isAvailable) {
             if isSelected {
                 selection.removeAll { $0 == choice.id }
             } else {
                 selection.append(choice.id)
             }
-        } label: {
-            HStack {
-                Text(choice.name)
-                    .foregroundStyle(isAvailable ? Color.primary : Color.secondary)
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.tint)
-                }
-            }
-            .contentShape(.rect)
         }
-        .disabled(!isAvailable)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     /// Whether a chosen option rules this one out, or this one rules out a chosen option.

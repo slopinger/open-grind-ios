@@ -35,37 +35,67 @@ struct MultiSelectList<Attribute: ProfileAttribute>: View {
         List {
             Section {
                 ForEach(options) { option in
-                    Button {
+                    CheckRow(title: option.localizedName, isSelected: selection.contains(option)) {
                         if selection.contains(option) {
                             selection.remove(option)
                         } else {
                             selection.insert(option)
                         }
-                    } label: {
-                        HStack {
-                            Text(option.localizedName)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if selection.contains(option) {
-                                Image(systemName: "checkmark")
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.tint)
-                            }
-                        }
-                        .contentShape(.rect)
                     }
-                    .accessibilityAddTraits(selection.contains(option) ? .isSelected : [])
                 }
             }
             if !selection.isEmpty {
                 Section {
-                    Button("Clear Selection", role: .destructive) { selection.removeAll() }
+                    ClearSelectionButton { selection.removeAll() }
                 }
             }
         }
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.inline)
-        .sensoryFeedback(.selection, trigger: selection)
+        .checklistPage(title, selection: selection)
+    }
+}
+
+/// A checklist row: the option, with a checkmark while it is chosen.
+struct CheckRow: View {
+    let title: String
+    let isSelected: Bool
+    /// Off when the option can't be added, e.g. past a limit.
+    var isEnabled = true
+    let toggle: () -> Void
+
+    var body: some View {
+        Button(action: toggle) {
+            HStack {
+                Text(title)
+                    .foregroundStyle(isEnabled ? Color.primary : Color.secondary)
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.tint)
+                }
+            }
+            .contentShape(.rect)
+        }
+        .disabled(!isEnabled)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// Empties a checklist.
+struct ClearSelectionButton: View {
+    let clear: () -> Void
+
+    var body: some View {
+        Button("Clear Selection", role: .destructive, action: clear)
+    }
+}
+
+extension View {
+    /// The title and selection haptics every checklist page shares.
+    func checklistPage(_ title: LocalizedStringKey, selection: some Equatable) -> some View {
+        navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .sensoryFeedback(.selection, trigger: selection)
     }
 }
 
