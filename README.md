@@ -33,8 +33,8 @@ Everyone shown is made up; the avatars are DiceBear's Notionists by Zoish (CC0).
 - **Messages**: the inbox with search, filters, pin, mute and delete; chats with live updates,
   typing and read indicators, photos, stickers, GIFs, locations, hearts, unsend and retry.
 - **Interest**: taps and profile views.
-- **Your profile**: edit every field Grindr allows; add, reorder and delete photos (new ones are
-  marked while Grindr reviews them); manage blocked profiles.
+- **Your profile**: edit every field Grindr allows, including up to 10 tags; add, reorder and delete
+  photos (new ones are marked while Grindr reviews them); manage blocked profiles.
 - **Demo**: try every screen with made-up profiles, without an account.
 
 Built to Apple's Human Interface Guidelines: system navigation, tab bar and sheets; Dynamic Type,
