@@ -5,6 +5,7 @@ import SwiftUI
 struct BrowseView: View {
     @Environment(AccountSession.self) private var session
     @State private var isShowingFilters = false
+    @State private var isShowingExplore = false
     @Namespace private var transition
 
     private var browse: BrowseModel { session.browse }
@@ -13,7 +14,14 @@ struct BrowseView: View {
         // Untyped: the stack holds grid tiles as well as routes.
         NavigationStack {
             content
-                .navigationTitle("Nearby")
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    ExploreBar(place: browse.exploring) {
+                        isShowingExplore = true
+                    } stop: {
+                        Task { await browse.explore(nil) }
+                    }
+                }
+                .navigationTitle(browse.exploring == nil ? "Nearby" : "Explore")
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
@@ -34,6 +42,13 @@ struct BrowseView: View {
                 .sheet(isPresented: $isShowingFilters) {
                     FilterSheet(filters: browse.filters) { filters in
                         Task { await browse.apply(filters) }
+                    }
+                }
+                .sheet(isPresented: $isShowingExplore) {
+                    ExploreSheet(
+                        start: browse.exploring ?? browse.currentPlace, isExploring: browse.exploring != nil
+                    ) { place in
+                        Task { await browse.explore(place) }
                     }
                 }
                 .routeDestinations()
@@ -87,7 +102,18 @@ struct BrowseView: View {
 
     @ViewBuilder
     private var emptyState: some View {
-        if browse.filters.isDefault {
+        if browse.filters.isDefault, browse.exploring != nil {
+            ContentUnavailableView {
+                Label("No One Here", systemImage: "binoculars")
+            } description: {
+                Text("No one is around this place right now. Try another one.")
+            } actions: {
+                Button("Back to My Location") {
+                    Task { await browse.explore(nil) }
+                }
+                .buttonStyle(.bordered)
+            }
+        } else if browse.filters.isDefault {
             ContentUnavailableView {
                 Label("No One Nearby", systemImage: "person.2.slash")
             } description: {
@@ -105,6 +131,59 @@ struct BrowseView: View {
                 .buttonStyle(.bordered)
             }
         }
+    }
+}
+
+/// Looks like a search field: shows where the grid is and opens the map to
+/// explore somewhere else.
+private struct ExploreBar: View {
+    let place: ExplorePlace?
+    let open: () -> Void
+    let stop: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button(action: open) {
+                HStack(spacing: 8) {
+                    Image(systemName: place == nil ? "magnifyingglass" : "binoculars.fill")
+                        .foregroundStyle(place == nil ? Color.secondary : Color.brand)
+                    if let place {
+                        Text(place.name ?? String(localized: "Selected Place"))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                    } else {
+                        Text("Explore Another Place")
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "map")
+                        .foregroundStyle(.tint)
+                }
+                .padding(.horizontal, 12)
+                .frame(minHeight: 40)
+                .background(Color(.tertiarySystemFill), in: .capsule)
+                .contentShape(.capsule)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(
+                place.map { Text("Exploring \($0.name ?? String(localized: "Selected Place"))") }
+                    ?? Text("Explore Another Place")
+            )
+            .accessibilityHint("Opens a map to choose a place.")
+
+            if place != nil {
+                Button("Back to My Location", systemImage: "location.fill", action: stop)
+                    .labelStyle(.iconOnly)
+                    .font(.title3)
+                    .frame(width: 40, height: 40)
+                    .background(Color(.tertiarySystemFill), in: .circle)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.bar)
+        .animation(.default, value: place)
     }
 }
 
