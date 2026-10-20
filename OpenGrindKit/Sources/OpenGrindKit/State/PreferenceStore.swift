@@ -19,13 +19,13 @@ public struct DefaultsPreferenceStore: PreferenceStore, @unchecked Sendable {
     public func browseFilters(for profileID: ProfileID) -> BrowseFilters? {
         // Filters saved by an older version that no longer decode fall back to the defaults.
         defaults.data(forKey: Self.filtersKey(profileID)).flatMap {
-            try? JSONDecoder().decode(BrowseFilters.self, from: $0)
+            try? JSON.decode(BrowseFilters.self, from: $0)
         }
     }
 
     public func saveBrowseFilters(_ filters: BrowseFilters?, for profileID: ProfileID) {
         let key = Self.filtersKey(profileID)
-        if let filters, let data = try? JSONEncoder().encode(filters) {
+        if let filters, let data = try? JSON.encode(filters) {
             defaults.set(data, forKey: key)
         } else {
             defaults.removeObject(forKey: key)

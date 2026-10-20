@@ -22,8 +22,9 @@ public enum GrindrError: Error, Sendable, Hashable {
     case rateLimited
     /// Cloudflare or another edge answered instead of Grindr. Often temporary.
     case blocked
-    /// The API refused the request. `code` is the `urn:gr:err:` type or the
-    /// numeric code from the body, when there is one.
+    /// The API refused the request. `code` is the `urn:gr:err:` type, the
+    /// numeric code from the body, or a bare text code such as `CAS-4001`, when
+    /// there is one.
     case server(status: Int, code: String?, message: String?)
     /// The profile or conversation is gone, hidden or blocked.
     case unavailable
