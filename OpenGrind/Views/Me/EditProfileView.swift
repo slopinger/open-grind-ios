@@ -184,14 +184,22 @@ struct EditProfileView: View {
     }
 
     private var identitySection: some View {
-        Section {
+        Section("Identity") {
+            ChoiceRow(
+                title: "Gender", selection: $edit.genderIDs, choices: genderChoices, limit: ProfileEdit.maxGenders)
+            ChoiceRow(
+                title: "Pronouns", selection: $edit.pronounIDs,
+                choices: me.pronouns.map { Choice(id: $0.id, name: $0.name) }, limit: ProfileEdit.maxPronouns)
             MultiSelectRow(title: "Tribes", selection: $edit.tribes)
             Toggle("Show Tribes", isOn: $edit.showsTribes)
-        } header: {
-            Text("Identity")
-        } footer: {
-            Text("Gender and pronouns can be changed in the Grindr app.")
         }
+    }
+
+    /// The genders a profile can show, plus any you have that are no longer offered.
+    private var genderChoices: [Choice] {
+        let offered = Gender.profileOptions(me.genders)
+        let kept = edit.genderIDs.filter { id in !offered.contains { $0.id == id } }.compactMap { me.gender($0) }
+        return (offered + kept).map { Choice(id: $0.id, name: $0.name, excludes: $0.excludedOnProfile) }
     }
 
     private var healthSection: some View {
