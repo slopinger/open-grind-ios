@@ -179,6 +179,8 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
     public var relationshipStatuses: Set<RelationshipStatus> = []
     public var meetAt: Set<MeetAt> = []
     public var acceptsNSFWPics: Set<AcceptsNSFWPics> = []
+    /// Keys of ``ProfileTag``s; matching profiles have at least one of them.
+    public var tags: Set<String> = []
 
     public init() {}
 
@@ -191,7 +193,7 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
             onlineOnly, photosOnly, facePhotosOnly, favoritesOnly, notChattedToday,
             ages != Self.ageBounds, heights != Self.heightBounds, weights != Self.weightBounds,
             !positions.isEmpty, !lookingFor.isEmpty, !tribes.isEmpty, !bodyTypes.isEmpty,
-            !relationshipStatuses.isEmpty, !meetAt.isEmpty, !acceptsNSFWPics.isEmpty,
+            !relationshipStatuses.isEmpty, !meetAt.isEmpty, !acceptsNSFWPics.isEmpty, !tags.isEmpty,
         ].filter { $0 }.count
     }
 
@@ -236,6 +238,25 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
         list("relationshipStatuses", relationshipStatuses)
         list("meetAt", meetAt)
         list("nsfwPics", acceptsNSFWPics)
+        if !tags.isEmpty {
+            items.append(URLQueryItem(name: "tags", value: tags.sorted().joined(separator: ",")))
+        }
         return items
     }
+}
+
+/// A place to browse other than where you are.
+public struct ExplorePlace: Hashable, Sendable {
+    public var latitude: Double
+    public var longitude: Double
+    /// What to call the place, e.g. a city from reverse geocoding.
+    public var name: String?
+
+    public init(latitude: Double, longitude: Double, name: String? = nil) {
+        self.latitude = latitude
+        self.longitude = longitude
+        self.name = name
+    }
+
+    var geohash: String { Geohash.encode(latitude: latitude, longitude: longitude) }
 }

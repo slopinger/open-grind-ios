@@ -13,11 +13,15 @@ public struct GrindrAPI: Sendable {
 
     // MARK: Browse
 
-    /// A page of nearby profiles around `geohash`.
-    public func cascade(near geohash: String, filters: BrowseFilters, page: Int?) async throws
-        -> CascadePage
+    /// A page of profiles around `geohash`, your location, or around `exploring`
+    /// when set. Exploring does not move your own profile.
+    public func cascade(near geohash: String, exploring: String? = nil, filters: BrowseFilters, page: Int?)
+        async throws -> CascadePage
     {
         var query = [URLQueryItem(name: "nearbyGeoHash", value: Geohash.coarsen(geohash))]
+        if let exploring {
+            query.append(URLQueryItem(name: "exploreGeoHash", value: Geohash.coarsen(exploring)))
+        }
         query += filters.queryItems()
         if let page { query.append(URLQueryItem(name: "pageNumber", value: String(page))) }
         return try await decode(CascadePage.self, APIRequest(.get, "/v4/cascade", query: query))
@@ -77,6 +81,11 @@ public struct GrindrAPI: Sendable {
 
     public func genders() async throws -> [Gender] {
         try await decode(LossyArray<Gender>.self, APIRequest(.get, "/public/v2/genders")).elements
+    }
+
+    /// Every profile tag, in the device's language.
+    public func profileTags() async throws -> ProfileTagCatalog {
+        try await decode(ProfileTagCatalog.self, APIRequest(.get, "/v1/tags"))
     }
 
     public func pronouns() async throws -> [Pronoun] {

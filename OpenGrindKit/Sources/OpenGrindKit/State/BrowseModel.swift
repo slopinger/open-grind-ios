@@ -9,6 +9,11 @@ public final class BrowseModel {
     public private(set) var state: LoadState = .idle
     public private(set) var isLoadingMore = false
     public private(set) var filters = BrowseFilters()
+    /// The tags to filter by, once ``loadTagCatalog()`` has run.
+    public private(set) var tagCatalog: ProfileTagCatalog?
+    public private(set) var tagCatalogState: LoadState = .idle
+    /// A place you are looking around instead of where you are.
+    public private(set) var exploring: ExplorePlace?
 
     @ObservationIgnored weak var session: AccountSession?
     @ObservationIgnored private let api: GrindrAPI
@@ -38,7 +43,8 @@ public final class BrowseModel {
         if profiles.isEmpty { state = .loading }
         do {
             let geohash = try await location.currentGeohash()
-            let page = try await api.cascade(near: geohash, filters: filters, page: nil)
+            let page = try await api.cascade(
+                near: geohash, exploring: exploring?.geohash, filters: filters, page: nil)
             guard generation == self.generation else { return }
             self.geohash = geohash
             profiles = page.profiles
@@ -74,13 +80,36 @@ public final class BrowseModel {
         isLoadingMore = true
         defer { isLoadingMore = false }
         do {
-            let next = try await api.cascade(near: geohash, filters: filters, page: page)
+            let next = try await api.cascade(
+                near: geohash, exploring: exploring?.geohash, filters: filters, page: page)
             guard generation == self.generation else { return }
             let known = Set(profiles.map(\.id))
             profiles += next.profiles.filter { !known.contains($0.id) }
             nextPage = next.nextPage
         } catch {
             // The grid stays usable; scrolling to the end again retries.
+        }
+    }
+
+    /// Shows the profiles around `place` instead of around you, or around you
+    /// again when `nil`.
+    public func explore(_ place: ExplorePlace?) async {
+        guard place != exploring else { return }
+        exploring = place
+        profiles = []
+        nextPage = nil
+        await refresh()
+    }
+
+    /// Loads the tags the filters offer, unless they are already loaded.
+    public func loadTagCatalog() async {
+        guard tagCatalog == nil, !tagCatalogState.isLoading else { return }
+        tagCatalogState = .loading
+        do {
+            tagCatalog = try await api.profileTags()
+            tagCatalogState = .loaded
+        } catch {
+            tagCatalogState = .failed(Failure(error))
         }
     }
 

@@ -102,6 +102,10 @@ actor DemoWorld {
                 return false
             }
             if !filters.tribes.isEmpty, filters.tribes.isDisjoint(with: profile.tribes) { return false }
+            if !filters.tags.isEmpty {
+                let texts = Set(filters.tags.compactMap(Self.tagCatalog.text(forKey:)))
+                if texts.isDisjoint(with: profile.tags) { return false }
+            }
             return true
         }
         let start = (page - 1) * pageSize
@@ -442,8 +446,29 @@ actor DemoWorld {
         profile.isVisiting = seed.bio.contains("Visiting") || seed.bio.contains("Traveling")
         profile.genderIDs = [1]
         profile.instagram = index % 6 == 1 ? seed.name.lowercased() + ".berlin" : nil
+        profile.tags = Array(
+            tagCatalog.tags(matching: "").shuffled(using: &random).prefix(Int.random(in: 0...4, using: &random))
+        ).map(\.text)
         return Person(profile: profile, photoSeeds: seeds)
     }
+
+    /// The tags the demo offers in its filters and puts on its profiles.
+    static let tagCatalog = ProfileTagCatalog(categories: [
+        ProfileTagCategory(
+            name: "Interests",
+            tags: [
+                ProfileTag(key: "hiking", text: "Hiking"), ProfileTag(key: "coffee", text: "Coffee"),
+                ProfileTag(key: "gaming", text: "Gaming"), ProfileTag(key: "music", text: "Music"),
+                ProfileTag(key: "cooking", text: "Cooking"), ProfileTag(key: "gym", text: "Gym"),
+                ProfileTag(key: "travel", text: "Travel"), ProfileTag(key: "art", text: "Art"),
+            ]),
+        ProfileTagCategory(
+            name: "Personality",
+            tags: [
+                ProfileTag(key: "funny", text: "Funny"), ProfileTag(key: "nerd", text: "Nerd"),
+                ProfileTag(key: "chill", text: "Chill"), ProfileTag(key: "romantic", text: "Romantic"),
+            ]),
+    ])
 
     private static func makeThreads(
         people: [ProfileID: Person], order: [ProfileID], now: Date

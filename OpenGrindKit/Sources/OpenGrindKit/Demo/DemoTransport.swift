@@ -122,6 +122,18 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
                         ])
                     }))
         }
+        if route.matches(.get, "v1/tags") {
+            let categories = DemoWorld.tagCatalog.categories.map { category -> JSONValue in
+                .object([
+                    "text": .string(category.name), "possessiveText": .null,
+                    "tags": .array(
+                        category.tags.enumerated().map { index, tag in
+                            .object(["tagId": .int(index), "key": .string(tag.key), "text": .string(tag.text)])
+                        }),
+                ])
+            }
+            return try .json(.array([.object(["language": .string("en"), "categoryCollection": .array(categories)])]))
+        }
         if route.matches(.get, "v1/pronouns") {
             return try .json(
                 .array(
@@ -269,6 +281,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
         filters.positions = ids("sexualPositions")
         filters.lookingFor = ids("lookingFor")
         filters.tribes = ids("tribes")
+        filters.tags = Set((query["tags"] ?? "").split(separator: ",").map(String.init))
         let page = await world.gridPage(
             filters: filters, page: query["pageNumber"].flatMap(Int.init) ?? 1)
         var items = page.profiles.map { profile -> JSONValue in

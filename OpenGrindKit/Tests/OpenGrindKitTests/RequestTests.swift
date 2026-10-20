@@ -18,20 +18,32 @@ struct RequestTests {
             ])
     }
 
+    @Test func exploringKeepsYourLocationAndAddsTheCoarsenedPlace() async throws {
+        let transport = FakeTransport { _ in .json(#"{"items":[],"nextPage":null}"#) }
+        let api = GrindrAPI(transport: transport)
+        _ = try await api.cascade(
+            near: "u33dc0cppvbz", exploring: "dr5regw3pg6f", filters: BrowseFilters(), page: nil)
+        let request = try #require(transport.requests.first)
+        let items = try #require(URLComponents(string: request.path)?.queryItems)
+        #expect(items.first { $0.name == "nearbyGeoHash" }?.value == Geohash.coarsen("u33dc0cppvbz"))
+        #expect(items.first { $0.name == "exploreGeoHash" }?.value == Geohash.coarsen("dr5regw3pg6f"))
+    }
+
     @Test func filtersBecomeCascadeQueryItems() {
         var filters = BrowseFilters()
         filters.onlineOnly = true
         filters.ages = 25...40
         filters.positions = [.versBottom, .top]
         filters.weights = 60_000...BrowseFilters.weightBounds.upperBound
+        filters.tags = ["hiking", "coffee"]
         let items = Dictionary(
             uniqueKeysWithValues: filters.queryItems().map { ($0.name, $0.value ?? "") })
         #expect(
             items == [
                 "onlineOnly": "true", "ageMin": "25", "ageMax": "40", "sexualPositions": "1,4",
-                "weightGramsMin": "60000", "weightGramsMax": "272156",
+                "weightGramsMin": "60000", "weightGramsMax": "272156", "tags": "coffee,hiking",
             ])
-        #expect(filters.activeCount == 4)
+        #expect(filters.activeCount == 5)
         #expect(BrowseFilters().activeCount == 0)
     }
 

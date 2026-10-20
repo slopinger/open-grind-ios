@@ -55,6 +55,21 @@ struct DemoTests {
         #expect(session.browse.profiles.allSatisfy { $0.isOnline() })
     }
 
+    @Test func tagFiltersMatchProfileTags() async throws {
+        let session = try await signedIn()
+        await session.browse.loadTagCatalog()
+        let catalog = try #require(session.browse.tagCatalog)
+        #expect(catalog.text(forKey: "hiking") == "Hiking")
+        var filters = BrowseFilters()
+        filters.tags = ["hiking"]
+        await session.browse.apply(filters)
+        #expect(!session.browse.profiles.isEmpty)
+        for tile in session.browse.profiles.prefix(5) {
+            let profile = try await session.api.profile(tile.id)
+            #expect(profile.tags.contains("Hiking"))
+        }
+    }
+
     @Test func demoProfilesReply() async throws {
         let session = try await signedIn()
         let chat = session.chat(with: 20_000)

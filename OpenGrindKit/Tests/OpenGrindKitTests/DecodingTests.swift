@@ -48,6 +48,24 @@ struct DecodingTests {
         #expect(MediaURL.validated("https://d1.cloudfront.net/x") != nil)
     }
 
+    @Test func tagCatalogUsesTheFirstLanguageAndSkipsBrokenEntries() throws {
+        let catalog = try decode(
+            ProfileTagCatalog.self,
+            """
+            [{"language":"de","categoryCollection":[
+              {"text":"Hobbys","possessiveText":null,"tags":[
+                {"tagId":1,"key":"hiking","text":"Wandern"},{"tagId":2,"text":"no key"},
+                {"tagId":3,"key":"coffee","text":"Kaffee"}]},
+              {"text":"Leer","tags":[]}]},
+             {"language":"en","categoryCollection":[
+              {"text":"Hobbies","tags":[{"tagId":1,"key":"hiking","text":"Hiking"}]}]}]
+            """)
+        #expect(catalog.categories.map(\.name) == ["Hobbys"])
+        #expect(catalog.categories.first?.tags.map(\.key) == ["hiking", "coffee"])
+        #expect(catalog.text(forKey: "coffee") == "Kaffee")
+        #expect(catalog.tags(matching: "wand").map(\.key) == ["hiking"])
+    }
+
     @Test func gaymojiURLsAndLabels() {
         #expect(
             MediaURL.gaymoji("gaymoji/Man_with_beard%2C.png")?.absoluteString
