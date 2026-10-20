@@ -1,8 +1,6 @@
-import ImageIO
 import OpenGrindKit
 import PhotosUI
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// The message field, photo button and send button under a chat.
 struct ChatComposer: View {
@@ -62,44 +60,15 @@ struct ChatComposer: View {
     private func sendPhoto(_ item: PhotosPickerItem) async {
         do {
             guard let data = try await item.loadTransferable(type: Data.self),
-                let jpeg = await ChatPhotoEncoder.jpeg(from: data)
+                let photo = await PhotoEncoder.jpeg(from: data)
             else {
                 photoFailure = .unexpected("unreadable photo")
                 return
             }
             sentCount += 1
-            await chat.sendPhoto(jpeg, contentType: "image/jpeg")
+            await chat.sendPhoto(photo.data, contentType: "image/jpeg")
         } catch {
             photoFailure = Failure(error)
         }
-    }
-}
-
-/// Prepares photos for chat: at most 2048 pixels on the long side, JPEG, and
-/// without metadata such as the location the photo was taken at.
-enum ChatPhotoEncoder {
-    static let maxPixelSize = 2048
-
-    @concurrent
-    static func jpeg(from data: Data) async -> Data? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-        let options: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
-        ]
-        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
-            return nil
-        }
-        let output = NSMutableData()
-        guard
-            let destination = CGImageDestinationCreateWithData(
-                output as CFMutableData, UTType.jpeg.identifier as CFString, 1, nil)
-        else { return nil }
-        // Only the pixels are written: no EXIF, GPS or TIFF dictionaries.
-        CGImageDestinationAddImage(
-            destination, image, [kCGImageDestinationLossyCompressionQuality: 0.82] as CFDictionary)
-        guard CGImageDestinationFinalize(destination) else { return nil }
-        return output as Data
     }
 }

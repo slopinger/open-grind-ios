@@ -6,20 +6,21 @@ import UniformTypeIdentifiers
 
 @testable import OpenGrind
 
-struct ChatPhotoEncoderTests {
+struct PhotoEncoderTests {
     @Test func photosLoseTheirLocationAndAreScaledDown() async throws {
         let original = try Self.jpeg(width: 4000, height: 3000, latitude: 52.52, longitude: 13.405)
         #expect(Self.properties(of: original)[kCGImagePropertyGPSDictionary] != nil)
 
-        let encoded = try #require(await ChatPhotoEncoder.jpeg(from: original))
-        let properties = Self.properties(of: encoded)
+        let encoded = try #require(await PhotoEncoder.jpeg(from: original))
+        #expect(encoded.width == PhotoEncoder.maxPixelSize && encoded.height == 1536)
+        let properties = Self.properties(of: encoded.data)
         #expect(properties[kCGImagePropertyGPSDictionary] == nil)
-        #expect(properties[kCGImagePropertyPixelWidth] as? Int == ChatPhotoEncoder.maxPixelSize)
+        #expect(properties[kCGImagePropertyPixelWidth] as? Int == PhotoEncoder.maxPixelSize)
         #expect(properties[kCGImagePropertyPixelHeight] as? Int == 1536)
     }
 
     @Test func unreadableDataIsRejected() async {
-        #expect(await ChatPhotoEncoder.jpeg(from: Data("not a photo".utf8)) == nil)
+        #expect(await PhotoEncoder.jpeg(from: Data("not a photo".utf8)) == nil)
     }
 
     private static func jpeg(width: Int, height: Int, latitude: Double, longitude: Double) throws -> Data {
