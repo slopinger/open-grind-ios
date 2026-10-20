@@ -34,8 +34,9 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
 - Regenerate bindings after changing `core/src/lib.rs`: `nix build .#core`, copy
   `result/share/swift/{opengrind_core.swift,opengrind_coreFFI.h}` into the package (see README).
 - Hydra: project `open-grind-ios`, jobset `main` on https://hydra.kyouma.net (the default Hydra; manage
-  it with the `hydra` MCP server). It builds `hydraJobs` = every flake check on x86_64-linux and aarch64-linux where it evaluates
-  (Swift is marked broken on aarch64-linux in nixpkgs, so only `core` and `bindings` run there).
+  it with the `hydra` MCP server). It builds `hydraJobs` = every flake check on x86_64-linux and
+  aarch64-linux where it evaluates (Swift is marked broken on aarch64-linux in nixpkgs, so only `core`
+  and `bindings` run there).
 - GitHub CI: `.github/workflows/ios.yml` (macos-26): xcframework, `swift test` on macOS, device build,
   simulator unit + UI tests, screenshots artifact (`gh run download <id> -n screenshots`).
   The iOS UI cannot be compiled on Linux; check CI after every app change.
