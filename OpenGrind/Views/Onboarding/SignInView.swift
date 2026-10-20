@@ -60,7 +60,7 @@ struct SignInView: View {
                 Section {
                 } footer: {
                     Text(
-                        "Forgot your password? Reset it in the Grindr app or on grindr.com. Signing in with Google or Facebook isn't supported yet."
+                        "Forgot your password? Reset it in the Grindr app or on grindr.com. Only email sign-in is supported: accounts that use Apple, Google, Facebook or a phone number can't sign in yet."
                     )
                 }
             }
