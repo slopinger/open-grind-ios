@@ -73,6 +73,10 @@ jobs:
           echo "SIMULATOR=$udid" >> "$GITHUB_ENV"
           xcrun simctl list devices | grep "$udid"
 
+      # A cold simulator sometimes times out launching the app under test.
+      - name: Boot the simulator
+        run: xcrun simctl bootstatus "$SIMULATOR" -b
+
       - name: Test the app
         run: >
           xcodebuild test -project OpenGrind.xcodeproj -scheme OpenGrind
