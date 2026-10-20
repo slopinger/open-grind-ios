@@ -45,8 +45,11 @@ final class DemoTourTests: XCTestCase {
         app.buttons["Hiking"].tap()
         app.buttons["Coffee"].tap()
         snapshot(app, "11-tags")
+        // Closing the sheet applies the filters; the rest of the tour wants the whole grid.
+        app.buttons["Hiking"].tap()
+        app.buttons["Coffee"].tap()
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.buttons["Cancel"].tap()
+        app.buttons["Done"].tap()
 
         app.buttons["Explore Another Place"].tap()
         XCTAssertTrue(app.navigationBars["Explore"].waitForExistence(timeout: 5))

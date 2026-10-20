@@ -1,7 +1,7 @@
 import OpenGrindKit
 import SwiftUI
 
-/// Narrows down the nearby grid.
+/// Narrows down the nearby grid. Changes apply when the sheet closes.
 struct FilterSheet: View {
     let apply: (BrowseFilters) -> Void
 
@@ -79,17 +79,14 @@ struct FilterSheet: View {
             .navigationTitle("Filters")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
-                        apply(filters)
-                        dismiss()
-                    }
+                    Button("Done") { dismiss() }
                 }
             }
         }
+        // On the stack, not the form, so opening the tag list doesn't count as leaving.
+        // Applies however the sheet closes, including a swipe down.
+        .onDisappear { apply(filters) }
     }
 
     /// Heights in whole centimeters.
