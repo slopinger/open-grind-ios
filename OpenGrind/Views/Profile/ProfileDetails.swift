@@ -106,18 +106,16 @@ struct ProfileDetails: View {
         let genders = profile.genderIDs.compactMap { catalogs.gender($0)?.name }
         let pronouns = profile.pronounIDs.compactMap { catalogs.pronoun($0)?.name }
         return [
-            DetailRow("Gender", genders.isEmpty ? nil : genders.formatted(.list(type: .and))),
-            DetailRow("Pronouns", pronouns.isEmpty ? nil : pronouns.joined(separator: ", ")),
-            DetailRow(
-                "Tribes",
-                profile.showsTribes && !profile.tribes.isEmpty ? profile.tribes.localizedList : nil),
+            DetailRow("Gender", genders.formatted(.list(type: .and))),
+            DetailRow("Pronouns", pronouns.joined(separator: ", ")),
+            DetailRow("Tribes", profile.showsTribes ? profile.tribes.localizedList : nil),
         ]
     }
 
     private var expectations: [DetailRow] {
         [
-            DetailRow("Looking For", profile.lookingFor.isEmpty ? nil : profile.lookingFor.localizedList),
-            DetailRow("Meet At", profile.meetAt.isEmpty ? nil : profile.meetAt.localizedList),
+            DetailRow("Looking For", profile.lookingFor.localizedList),
+            DetailRow("Meet At", profile.meetAt.localizedList),
             DetailRow("NSFW Pics", profile.acceptsNSFWPics?.localizedName),
         ]
     }
@@ -126,18 +124,16 @@ struct ProfileDetails: View {
         [
             DetailRow("HIV Status", profile.hivStatus?.localizedName),
             DetailRow("Last Tested", profile.lastTested?.formatted(.dateTime.month(.wide).year())),
-            DetailRow(
-                "Practices", profile.sexualHealth.isEmpty ? nil : profile.sexualHealth.localizedList),
-            DetailRow("Vaccinated", profile.vaccines.isEmpty ? nil : profile.vaccines.localizedList),
+            DetailRow("Practices", profile.sexualHealth.localizedList),
+            DetailRow("Vaccinated", profile.vaccines.localizedList),
         ]
     }
 }
 
-/// One labeled value of a profile.
-struct DetailRow: Identifiable {
+/// One labeled value of a profile; empty values are left out.
+struct DetailRow {
     let title: LocalizedStringKey
     let value: String?
-    let id = UUID()
 
     init(_ title: LocalizedStringKey, _ value: String?) {
         self.title = title
@@ -162,14 +158,16 @@ struct DetailSection: View {
                     .font(.headline)
                     .accessibilityAddTraits(.isHeader)
                 VStack(spacing: 0) {
-                    ForEach(rows) { row in
+                    // The rows of a section are fixed, so their positions identify them.
+                    ForEach(rows.indices, id: \.self) { index in
+                        let row = rows[index]
                         LabeledContent(row.title) {
                             Text(row.value ?? "")
                                 .multilineTextAlignment(.trailing)
                         }
                         .padding(.vertical, 11)
                         .padding(.horizontal, 16)
-                        if row.id != rows.last?.id {
+                        if index < rows.count - 1 {
                             Divider().padding(.leading, 16)
                         }
                     }
