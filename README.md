@@ -6,16 +6,18 @@ and open source Grindr client. No ads, no trackers: the app talks only to Grindr
 Not affiliated with, endorsed or sponsored by Grindr LLC. Using an unofficial client may break
 Grindr's terms of service.
 
-<p align="center">
-  <img src="docs/screenshots/welcome.png" width="260" alt="Welcome screen with the Open Grind logo, its privacy promises and buttons to sign in or try the demo">
-  <img src="docs/screenshots/nearby.png" width="260" alt="Nearby grid of profile photos with names, ages and online dots">
-  <img src="docs/screenshots/profile.png" width="260" alt="A profile with a large photo, online status, about text, stats and a Message button">
-</p>
-<p align="center">
-  <img src="docs/screenshots/chat.png" width="260" alt="A chat with yellow outgoing and grey incoming bubbles, a Read receipt and the message field">
-  <img src="docs/screenshots/messages.png" width="260" alt="Inbox with search, photos, last messages and times">
-  <img src="docs/screenshots/interest.png" width="260" alt="Taps received, with tap emoji, distances and a Mutual badge">
-</p>
+<table align="center">
+  <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/nearby.png" width="240" alt="Nearby grid of profile photos with names, ages and online dots"><br><b>Nearby</b></td>
+    <td align="center" width="33%"><img src="docs/screenshots/profile.png" width="240" alt="A profile with a large photo, online status, about text, stats and a Message button"><br><b>Profiles</b></td>
+    <td align="center" width="33%"><img src="docs/screenshots/chat.png" width="240" alt="A chat with yellow outgoing and grey incoming bubbles, a Read receipt and the message field"><br><b>Chats</b></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/messages.png" width="240" alt="Inbox with search, photos, last messages and times"><br><b>Messages</b></td>
+    <td align="center" width="33%"><img src="docs/screenshots/interest.png" width="240" alt="Taps received, with tap emoji, distances and a Mutual badge"><br><b>Interest</b></td>
+    <td align="center" width="33%"><img src="docs/screenshots/welcome.png" width="240" alt="Welcome screen with the Open Grind logo, its privacy promises and buttons to sign in or try the demo"><br><b>Demo without an account</b></td>
+  </tr>
+</table>
 
 <sub>Screenshots of the built-in demo on an iPhone 17 Pro simulator, taken by the UI tests on CI.
 Everyone shown is made up; the avatars are DiceBear's Notionists by Zoish (CC0).</sub>

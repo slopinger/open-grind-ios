@@ -43,11 +43,10 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
 - GitHub CI: `.github/workflows/ios.yml` (macos-26): xcframework, `swift test` on macOS, device build,
   simulator unit + UI tests, screenshots artifact (`gh run download <id> -n screenshots`).
   The iOS UI cannot be compiled on Linux; check CI after every app change.
-- README screenshots: `docs/screenshots/{welcome,nearby,profile,chat,messages,interest}.png`, from a
-  green CI run's `screenshots` artifact (`01-welcome`, `03-browse`, `05-profile`, `07-chat`,
-  `08-messages`, `09-interest`; names in its `manifest.json`), resized to 600 px wide with metadata
-  stripped (`magick … -resize 600x -strip`, then `oxipng -o 4 --strip all`). Refresh them when the
-  UI changes visibly.
+- README screenshots: `docs/screenshots/*.png`, shown as a captioned 3-column table. Refresh them
+  from a green CI run when the UI changes visibly: `gh run download <id> -n screenshots -D <dir>`, then
+  `nix shell nixpkgs#imagemagick nixpkgs#oxipng nixpkgs#jq -c scripts/readme-screenshots.sh <dir>`
+  (picks the tour screenshots by name from `manifest.json`, 600 px, rounded corners, stripped).
 
 ## Gotchas
 - Sign-in is email only, deliberately (decided 2026-10-20; reasons in README "Sign-in"). Apple: no
