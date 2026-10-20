@@ -139,6 +139,7 @@ struct DemoTests {
         #expect(me.profile?.photos == reordered, "the new photo is now the main one and still in review")
 
         await me.deletePhoto(added)
+        #expect(me.profile?.photos == before, "the next photo is the main one again")
         await me.refresh()
         #expect(me.profile?.photos == before)
         #expect(me.actionFailure == nil)

@@ -178,9 +178,12 @@ public final class MeModel {
     /// Deletes a photo from your profile and from Grindr's servers.
     public func deletePhoto(_ photo: ProfilePhoto) async {
         guard let original = profile?.photos else { return }
-        profile?.photos.removeAll { $0 == photo }
+        let remaining = original.filter { $0 != photo }
+        profile?.photos = remaining
         do {
             try await api.deleteProfilePhotos([photo.mediaHash])
+            // The next photo becomes the main one.
+            if original.first == photo { try await api.setProfilePhotos(remaining.map(\.mediaHash)) }
         } catch {
             profile?.photos = original
             actionFailure = Failure(error)
