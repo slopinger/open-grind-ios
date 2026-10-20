@@ -34,12 +34,6 @@ struct MeView: View {
                     header
                     Button("Edit Profile", systemImage: "pencil") { isEditing = true }
                         .disabled(me.profile == nil)
-                    NavigationLink {
-                        EditPhotosView()
-                    } label: {
-                        Label("Edit Photos", systemImage: "photo.on.rectangle")
-                    }
-                    .disabled(me.profile == nil)
                     NavigationLink(value: Route.profile(session.profileID)) {
                         Label("Preview Profile", systemImage: "eye")
                     }
@@ -77,7 +71,7 @@ struct MeView: View {
             .routeDestinations()
             .sheet(isPresented: $isEditing) {
                 if let profile = me.profile {
-                    EditProfileView(profile: profile, me: me)
+                    EditProfileView(profile: profile, me: me, tagCatalog: session.browse.tagCatalog)
                 }
             }
             .confirmationDialog(

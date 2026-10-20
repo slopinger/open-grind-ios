@@ -70,7 +70,12 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
 - Tags: catalog `GET /v1/tags` (per language, first one used), cascade filter `tags=key1,key2`;
   profiles carry tag texts. Explore: `exploreGeoHash` next to `nearbyGeoHash` on `/v4/cascade`.
 - The UI tour also keeps `11-tags`, `12-explore`, `13-exploring`, `14-photos`, `15-photo-menu`,
-  `16-photos-reordered`.
+  `16-photos-reordered`, `17-filter-wheel`, `18-edit-profile`, `19-age-wheel`.
+- Form conventions: every option list (single or multiple choice, tags) opens its own page; numbers
+  (age, height, weight, filter ranges) use `WheelPickerRow`, which opens a wheel below the row, one at
+  a time per form. Photos are edited from Edit Profile and save immediately.
+- Own tags: `profileTags` keys in the profile PATCH (max 10). Profiles carry keys or texts;
+  `ProfileEdit(profile, tagCatalog:)` matches both.
 - Large titles: no custom top bars as `safeAreaInset` with `.background(.bar)` (it ignores all safe area
   edges by default and covers the large title under iOS 26+'s transparent navigation bar). The Browse
   explore/filter row is the first view of the grid's content instead.

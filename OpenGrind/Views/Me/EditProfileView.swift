@@ -1,22 +1,28 @@
 import OpenGrindKit
 import SwiftUI
 
-/// Edits your profile; only changed fields are sent.
+/// Edits your profile; only changed fields are sent. Photos are saved as you
+/// change them, on their own screen.
 struct EditProfileView: View {
     let me: MeModel
-    private let original: ProfileEdit
+    private let profile: Profile
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(AccountSession.self) private var session
+    /// What the form started with; its tags are matched to the catalog once it loads.
+    @State private var original: ProfileEdit
     @State private var edit: ProfileEdit
     @State private var openWheel: String?
     @State private var isSaving = false
     @State private var isConfirmingDiscard = false
     @State private var failure: Failure?
 
-    init(profile: Profile, me: MeModel) {
+    init(profile: Profile, me: MeModel, tagCatalog: ProfileTagCatalog?) {
         self.me = me
-        original = ProfileEdit(profile)
-        _edit = State(initialValue: ProfileEdit(profile))
+        self.profile = profile
+        let edit = ProfileEdit(profile, tagCatalog: tagCatalog)
+        _original = State(initialValue: edit)
+        _edit = State(initialValue: edit)
     }
 
     private var hasChanges: Bool { edit != original }
@@ -24,7 +30,9 @@ struct EditProfileView: View {
     var body: some View {
         NavigationStack {
             Form {
+                photosSection
                 aboutSection
+                tagsSection
                 statsSection
                 expectationsSection
                 identitySection
@@ -59,10 +67,51 @@ struct EditProfileView: View {
                 Button("Keep Editing", role: .cancel) {}
             }
             .failureAlert($failure)
+            .task { await session.browse.loadTagCatalog() }
+            .onChange(of: session.browse.tagCatalog) { _, catalog in
+                // Opened before the catalog arrived: match the tags now, unless they were edited.
+                guard let catalog, edit.tags == original.tags else { return }
+                let tags = ProfileEdit(profile, tagCatalog: catalog).tags
+                original.tags = tags
+                edit.tags = tags
+            }
         }
     }
 
     // MARK: Sections
+
+    private var photosSection: some View {
+        let photos = me.profile?.photos ?? []
+        return Section {
+            NavigationLink {
+                EditPhotosView()
+            } label: {
+                LabeledContent {
+                    HStack(spacing: -8) {
+                        ForEach(photos.prefix(MeModel.maxPhotos)) { photo in
+                            Avatar(photoHash: photo.mediaHash, size: 32)
+                                .overlay {
+                                    Circle().strokeBorder(Color(.secondarySystemGroupedBackground), lineWidth: 2)
+                                }
+                        }
+                    }
+                } label: {
+                    Text("Photos")
+                }
+            }
+            .accessibilityValue(Text("\(photos.count) of \(MeModel.maxPhotos)"))
+        } footer: {
+            Text("Photo changes are saved right away.")
+        }
+    }
+
+    private var tagsSection: some View {
+        Section {
+            TagPickerRow(selection: tagKeys, limit: ProfileEdit.maxTags)
+        } footer: {
+            Text("Up to \(ProfileEdit.maxTags) interests that show on your profile and help people find you.")
+        }
+    }
 
     private var aboutSection: some View {
         Section {
@@ -168,6 +217,20 @@ struct EditProfileView: View {
     }
 
     // MARK: Bindings
+
+    /// The chosen tags by key, for the tag list.
+    private var tagKeys: Binding<Set<String>> {
+        Binding {
+            Set(edit.tags.map(\.key))
+        } set: { keys in
+            let catalog = session.browse.tagCatalog
+            let current = edit.tags
+            edit.tags = Set(
+                keys.map { key in
+                    current.first { $0.key == key } ?? catalog?.tag(forKey: key) ?? ProfileTag(key: key, text: key)
+                })
+        }
+    }
 
     private var hasTestDate: Binding<Bool> {
         Binding {

@@ -63,7 +63,7 @@ struct FilterSheet: View {
                 }
 
                 Section {
-                    TagFilterRow(selection: $filters.tags)
+                    TagPickerRow(selection: $filters.tags, emptyLabel: "Any")
                 } footer: {
                     Text("Tags are interests people add to their profile.")
                 }

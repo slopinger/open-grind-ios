@@ -1,22 +1,29 @@
 import OpenGrindKit
 import SwiftUI
 
-/// A form row that opens the tag checklist; shows the chosen tags.
-struct TagFilterRow: View {
+/// A form row that opens the tag checklist; shows the chosen tags by key.
+struct TagPickerRow: View {
     @Binding var selection: Set<String>
+    /// What an empty selection means, e.g. "Any" in filters.
+    var emptyLabel: LocalizedStringKey = "None"
+    /// How many tags can be chosen, if limited.
+    var limit: Int?
 
     @Environment(AccountSession.self) private var session
 
     var body: some View {
         NavigationLink {
-            TagFilterList(selection: $selection)
+            TagPickerList(selection: $selection, limit: limit)
         } label: {
             LabeledContent("Tags") {
                 if selection.isEmpty {
-                    Text("Any")
+                    Text(emptyLabel)
                 } else if let catalog = session.browse.tagCatalog {
-                    Text(selection.sorted().map { catalog.text(forKey: $0) ?? $0 }.formatted(.list(type: .or)))
-                        .lineLimit(1)
+                    Text(
+                        selection.map { catalog.text(forKey: $0) ?? $0 }.sorted()
+                            .formatted(.list(type: limit == nil ? .or : .and))
+                    )
+                    .lineLimit(1)
                 } else {
                     Text("\(selection.count) selected")
                 }
@@ -26,10 +33,11 @@ struct TagFilterRow: View {
     }
 }
 
-/// Every tag Grindr offers, by category, searchable. Profiles with any chosen
-/// tag match.
-struct TagFilterList: View {
+/// Every tag Grindr offers, by category, searchable. Without a limit it's a
+/// filter: profiles with any chosen tag match.
+struct TagPickerList: View {
     @Binding var selection: Set<String>
+    var limit: Int?
 
     @Environment(AccountSession.self) private var session
     @State private var query = ""
@@ -58,11 +66,17 @@ struct TagFilterList: View {
     @ViewBuilder
     private func list(_ catalog: ProfileTagCatalog) -> some View {
         List {
-            if !selection.isEmpty, query.isEmpty {
+            if query.isEmpty, !selection.isEmpty || limit != nil {
                 Section {
-                    Button("Clear Selection", role: .destructive) { selection.removeAll() }
+                    if !selection.isEmpty {
+                        Button("Clear Selection", role: .destructive) { selection.removeAll() }
+                    }
                 } footer: {
-                    Text("Shows profiles with any of the selected tags.")
+                    if let limit {
+                        Text("\(selection.count) of \(limit) chosen. Your tags appear on your profile.")
+                    } else {
+                        Text("Shows profiles with any of the selected tags.")
+                    }
                 }
             }
             if query.isEmpty {
@@ -84,6 +98,7 @@ struct TagFilterList: View {
 
     private func row(_ tag: ProfileTag) -> some View {
         let isSelected = selection.contains(tag.key)
+        let isFull = limit.map { selection.count >= $0 } ?? false
         return Button {
             if isSelected {
                 selection.remove(tag.key)
@@ -93,7 +108,7 @@ struct TagFilterList: View {
         } label: {
             HStack {
                 Text(tag.text)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(isFull && !isSelected ? Color.secondary : Color.primary)
                 Spacer()
                 if isSelected {
                     Image(systemName: "checkmark")
@@ -103,6 +118,7 @@ struct TagFilterList: View {
             }
             .contentShape(.rect)
         }
+        .disabled(isFull && !isSelected)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

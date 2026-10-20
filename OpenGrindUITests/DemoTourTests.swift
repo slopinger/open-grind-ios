@@ -94,7 +94,11 @@ final class DemoTourTests: XCTestCase {
         sleep(1)
         snapshot(app, "10-me")
 
-        app.buttons["Edit Photos"].tap()
+        app.buttons["Edit Profile"].tap()
+        XCTAssertTrue(app.navigationBars["Edit Profile"].waitForExistence(timeout: 5))
+        sleep(1)
+        snapshot(app, "18-edit-profile")
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Photos'")).firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Photos"].waitForExistence(timeout: 5))
         sleep(2)
         snapshot(app, "14-photos")
@@ -104,6 +108,13 @@ final class DemoTourTests: XCTestCase {
         app.buttons["Make Main Photo"].tap()
         sleep(1)
         snapshot(app, "16-photos-reordered")
+
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let age = app.buttons["Age"]
+        for _ in 0..<6 where !age.isHittable { app.swipeUp() }
+        age.tap()
+        XCTAssertTrue(app.pickerWheels.firstMatch.waitForExistence(timeout: 5), "Tapping a number row opens a wheel")
+        snapshot(app, "19-age-wheel")
     }
 
     @MainActor
