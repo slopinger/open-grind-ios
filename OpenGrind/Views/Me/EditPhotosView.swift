@@ -1,0 +1,166 @@
+import OpenGrindKit
+import PhotosUI
+import SwiftUI
+
+/// Your profile photos: add, reorder and delete them. Changes are saved right away.
+struct EditPhotosView: View {
+    @Environment(AccountSession.self) private var session
+    @State private var pickerItems: [PhotosPickerItem] = []
+    @State private var pendingDelete: ProfilePhoto?
+    @State private var encodingFailure: Failure?
+
+    private var me: MeModel { session.me }
+    private var photos: [ProfilePhoto] { me.profile?.photos ?? [] }
+    private var remainingSlots: Int { MeModel.maxPhotos - photos.count }
+
+    var body: some View {
+        @Bindable var me = me
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+                    ForEach(photos) { photo in
+                        tile(photo)
+                    }
+                    if me.isUploadingPhoto {
+                        slot {
+                            ProgressView()
+                                .accessibilityLabel("Uploading photo")
+                        }
+                    } else if remainingSlots > 0 {
+                        addButton
+                    }
+                }
+                Text(
+                    "Your first photo is your main photo. Tap a photo to move or delete it. New photos are only visible to you until Grindr approves them."
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            }
+            .padding()
+        }
+        .navigationTitle("Photos")
+        .navigationBarTitleDisplayMode(.inline)
+        .animation(.default, value: photos)
+        .onChange(of: pickerItems) { _, items in
+            guard !items.isEmpty else { return }
+            pickerItems = []
+            Task { await upload(items) }
+        }
+        .confirmationDialog(
+            "Delete Photo?", isPresented: isConfirmingDelete, titleVisibility: .visible, presenting: pendingDelete
+        ) { photo in
+            Button("Delete Photo", role: .destructive) { Task { await me.deletePhoto(photo) } }
+        } message: { _ in
+            Text("The photo is removed from your profile and from Grindr.")
+        }
+        .failureAlert($me.actionFailure)
+        .failureAlert($encodingFailure)
+        .sensoryFeedback(.success, trigger: photos.count) { old, new in new > old }
+        .task { await me.loadIfNeeded() }
+    }
+
+    private func tile(_ photo: ProfilePhoto) -> some View {
+        let index = photos.firstIndex(of: photo) ?? 0
+        return Menu {
+            if index > 0 {
+                Button("Make Main Photo", systemImage: "star") { move(photo, to: 0) }
+                Button("Move Earlier", systemImage: "arrow.backward") { move(photo, to: index - 1) }
+            }
+            if index < photos.count - 1 {
+                Button("Move Later", systemImage: "arrow.forward") { move(photo, to: index + 1) }
+            }
+            Divider()
+            Button("Delete", systemImage: "trash", role: .destructive) { pendingDelete = photo }
+        } label: {
+            slot {
+                RemoteImage(url: MediaURL.profileImage(photo.mediaHash, size: .thumbnail), pointSize: 130)
+            }
+            .overlay(alignment: .topLeading) {
+                if index == 0 {
+                    Text("Main")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Color.brandForeground)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Color.brand, in: .capsule)
+                        .padding(6)
+                }
+            }
+            .overlay(alignment: .bottomLeading) {
+                if photo.isPendingReview {
+                    Image(systemName: "clock")
+                        .font(.caption.weight(.semibold))
+                        .padding(6)
+                        .background(.ultraThinMaterial, in: .circle)
+                        .padding(6)
+                }
+            }
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel(photo, index: index))
+        .accessibilityHint("Shows options to move or delete the photo.")
+    }
+
+    private var addButton: some View {
+        PhotosPicker(
+            selection: $pickerItems, maxSelectionCount: remainingSlots, matching: .images,
+            preferredItemEncoding: .compatible
+        ) {
+            slot {
+                Image(systemName: "plus")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.tint)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(.tint, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+            }
+        }
+        .accessibilityLabel("Add Photos")
+    }
+
+    private func slot(@ViewBuilder content: () -> some View) -> some View {
+        Color(.secondarySystemFill)
+            .aspectRatio(1, contentMode: .fit)
+            .overlay { content() }
+            .clipShape(.rect(cornerRadius: 12, style: .continuous))
+            .contentShape(.rect(cornerRadius: 12, style: .continuous))
+    }
+
+    private func accessibilityLabel(_ photo: ProfilePhoto, index: Int) -> Text {
+        var label = String(localized: "Photo \(index + 1) of \(photos.count)")
+        if index == 0 { label += ", " + String(localized: "main photo") }
+        if photo.isPendingReview { label += ", " + String(localized: "in review") }
+        return Text(label)
+    }
+
+    private func move(_ photo: ProfilePhoto, to destination: Int) {
+        var order = photos
+        guard let index = order.firstIndex(of: photo) else { return }
+        order.remove(at: index)
+        order.insert(photo, at: destination)
+        Task { await me.setPhotoOrder(order) }
+    }
+
+    private func upload(_ items: [PhotosPickerItem]) async {
+        for item in items {
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self),
+                    let photo = await PhotoEncoder.jpeg(from: data)
+                else {
+                    encodingFailure = .unexpected("unreadable photo")
+                    continue
+                }
+                await me.addPhoto(photo.data, width: photo.width, height: photo.height)
+                if me.actionFailure != nil { return }
+            } catch {
+                encodingFailure = Failure(error)
+            }
+        }
+    }
+
+    private var isConfirmingDelete: Binding<Bool> {
+        Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } })
+    }
+}
