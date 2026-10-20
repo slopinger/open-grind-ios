@@ -92,6 +92,19 @@ struct RequestTests {
         #expect(!edit.isValid)
     }
 
+    @Test func gendersAndPronounsAreSentInTheOrderChosen() throws {
+        let original = ProfileEdit(Profile(id: 1, genderIDs: [1], pronounIDs: [1]))
+        var edit = original
+        edit.genderIDs = [4, 1]
+        edit.pronounIDs = []
+        #expect(edit.patch(from: original) == .object(["genders": .ints([4, 1]), "pronouns": .ints([])]))
+        let applied = edit.applied(to: Profile(id: 1))
+        #expect(applied.genderIDs == [4, 1] && applied.pronounIDs.isEmpty)
+
+        edit.genderIDs = Array(1...(ProfileEdit.maxGenders + 1))
+        #expect(!edit.isValid)
+    }
+
     @Test func profilePhotosAreUploadedWithACentredSquareThumbnail() async throws {
         let transport = FakeTransport { _ in
             .json(#"{"hash":"h","mediaId":7,"imageSizes":[{"mediaHash":"abc","state":"Pending"}]}"#)

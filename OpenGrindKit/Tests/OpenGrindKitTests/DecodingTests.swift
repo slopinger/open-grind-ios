@@ -48,6 +48,20 @@ struct DecodingTests {
         #expect(MediaURL.validated("https://d1.cloudfront.net/x") != nil)
     }
 
+    @Test func profileGendersSkipHiddenOnesAndPutTheMainOnesFirst() throws {
+        let json = Data(
+            #"""
+            [{"genderId":9,"gender":"Queer","displayGroup":2,"sortProfile":1},
+             {"genderId":2,"gender":"Woman","displayGroup":1,"excludeOnProfileSelection":[1]},
+             {"genderId":12,"gender":"Hidden","displayGroup":0},
+             {"genderId":1,"gender":"Man","displayGroup":1,"excludeOnProfileSelection":[2]},
+             {"genderId":8,"gender":"Genderqueer","displayGroup":2,"sortProfile":0}]
+            """#.utf8)
+        let genders = try JSONDecoder().decode([Gender].self, from: json)
+        #expect(Gender.profileOptions(genders).map(\.id) == [1, 2, 8, 9])
+        #expect(genders.first { $0.id == 1 }?.excludedOnProfile == [2])
+    }
+
     @Test func tagCatalogUsesTheFirstLanguageAndSkipsBrokenEntries() throws {
         let catalog = try decode(
             ProfileTagCatalog.self,

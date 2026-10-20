@@ -7,6 +7,8 @@ public struct ProfileEdit: Hashable, Sendable {
     public static let maxAboutMeLength = 255
     public static let ageRange = 18...99
     public static let maxTags = 10
+    public static let maxGenders = 3
+    public static let maxPronouns = 3
 
     public var displayName: String
     public var aboutMe: String
@@ -31,6 +33,9 @@ public struct ProfileEdit: Hashable, Sendable {
     public var lastTested: Date?
     public var sexualHealth: Set<SexualHealthPractice>
     public var vaccines: Set<Vaccine>
+    /// In the order they were chosen.
+    public var genderIDs: [Int]
+    public var pronounIDs: [Int]
     /// Sent by key; the text is what your profile shows.
     public var tags: Set<ProfileTag>
 
@@ -59,6 +64,8 @@ public struct ProfileEdit: Hashable, Sendable {
         lastTested = profile.lastTested
         sexualHealth = Set(profile.sexualHealth).intersection(SexualHealthPractice.settableCases)
         vaccines = Set(profile.vaccines)
+        genderIDs = profile.genderIDs
+        pronounIDs = profile.pronounIDs
         tags = Set(profile.tags.map { tagCatalog?.tag(matching: $0) ?? ProfileTag(key: $0, text: $0) })
     }
 
@@ -66,6 +73,7 @@ public struct ProfileEdit: Hashable, Sendable {
     public var isValid: Bool {
         displayName.count <= Self.maxDisplayNameLength && aboutMe.count <= Self.maxAboutMeLength
             && age.map(Self.ageRange.contains) ?? true && tags.count <= Self.maxTags
+            && genderIDs.count <= Self.maxGenders && pronounIDs.count <= Self.maxPronouns
     }
 
     /// The `PATCH` body with the fields that differ from `original`, or `nil`
@@ -106,6 +114,8 @@ public struct ProfileEdit: Hashable, Sendable {
         }
         if sexualHealth != original.sexualHealth { fields["sexualHealth"] = set(sexualHealth) }
         if vaccines != original.vaccines { fields["vaccines"] = set(vaccines) }
+        if genderIDs != original.genderIDs { fields["genders"] = .ints(genderIDs) }
+        if pronounIDs != original.pronounIDs { fields["pronouns"] = .ints(pronounIDs) }
         if Set(tags.map(\.key)) != Set(original.tags.map(\.key)) {
             fields["profileTags"] = .array(tags.map(\.key).sorted().map(JSONValue.string))
         }
@@ -139,6 +149,8 @@ public struct ProfileEdit: Hashable, Sendable {
         profile.lastTested = lastTested
         profile.sexualHealth = SexualHealthPractice.allCases.filter(sexualHealth.contains)
         profile.vaccines = Vaccine.allCases.filter(vaccines.contains)
+        profile.genderIDs = genderIDs
+        profile.pronounIDs = pronounIDs
         profile.tags = tags.map(\.text).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
         return profile
     }

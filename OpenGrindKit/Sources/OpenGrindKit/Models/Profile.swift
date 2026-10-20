@@ -264,15 +264,27 @@ public struct Gender: Identifiable, Hashable, Sendable, Decodable {
     public var id: Int
     public var name: String
     public var pluralName: String?
+    /// 0 for genders that can't be put on a profile; missing counts as offered.
+    public var displayGroup: Int?
+    /// Where the gender goes in the profile list.
+    public var profileSortOrder: Int?
+    /// Genders that can't be chosen together with this one.
+    public var excludedOnProfile: [Int]
 
     enum CodingKeys: String, CodingKey {
-        case genderId, gender, genderPlural
+        case genderId, gender, genderPlural, displayGroup, sortProfile, excludeOnProfileSelection
     }
 
-    public init(id: Int, name: String, pluralName: String? = nil) {
+    public init(
+        id: Int, name: String, pluralName: String? = nil, displayGroup: Int? = nil, profileSortOrder: Int? = nil,
+        excludedOnProfile: [Int] = []
+    ) {
         self.id = id
         self.name = name
         self.pluralName = pluralName
+        self.displayGroup = displayGroup
+        self.profileSortOrder = profileSortOrder
+        self.excludedOnProfile = excludedOnProfile
     }
 
     public init(from decoder: any Decoder) throws {
@@ -280,6 +292,22 @@ public struct Gender: Identifiable, Hashable, Sendable, Decodable {
         id = try container.decode(Int.self, forKey: .genderId)
         name = try container.decode(String.self, forKey: .gender)
         pluralName = container.lenient(String.self, forKey: .genderPlural)
+        displayGroup = container.lenient(Int.self, forKey: .displayGroup)
+        profileSortOrder = container.lenient(Int.self, forKey: .sortProfile)
+        excludedOnProfile = container.lenient([Int].self, forKey: .excludeOnProfileSelection) ?? []
+    }
+
+    /// Whether the gender can be put on a profile.
+    public var isOfferedOnProfile: Bool { (displayGroup ?? 1) > 0 }
+
+    /// The genders you can choose from, in Grindr's order: the main genders
+    /// first (as upstream Open Grind orders them), then by the catalog's order.
+    public static func profileOptions(_ genders: [Gender]) -> [Gender] {
+        let primary = [1, 4, 5, 2, 6, 7, 3]
+        func rank(_ gender: Gender) -> (Int, Int, Int) {
+            (primary.firstIndex(of: gender.id) ?? .max, gender.profileSortOrder ?? .max, gender.id)
+        }
+        return genders.filter(\.isOfferedOnProfile).sorted { rank($0) < rank($1) }
     }
 }
 

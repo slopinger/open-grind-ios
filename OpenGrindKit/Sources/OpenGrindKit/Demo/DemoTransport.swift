@@ -141,9 +141,13 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
         if route.matches(.get, "public/v2/genders") {
             return try .json(
                 .array(
-                    [(1, "Man", "Men"), (2, "Woman", "Women"), (3, "Non-binary", "Non-binary people")].map {
+                    [
+                        (1, "Man", "Men"), (2, "Woman", "Women"), (3, "Non-binary", "Non-binary people"),
+                        (4, "Trans Man", "Trans men"), (5, "Trans Woman", "Trans women"),
+                    ].map { id, name, plural in
                         .object([
-                            "genderId": .int($0.0), "gender": .string($0.1), "genderPlural": .string($0.2),
+                            "genderId": .int(id), "gender": .string(name), "genderPlural": .string(plural),
+                            "displayGroup": .int(1),
                         ])
                     }))
         }

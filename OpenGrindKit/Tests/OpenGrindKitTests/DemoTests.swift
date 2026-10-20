@@ -43,7 +43,7 @@ struct DemoTests {
         #expect(session.interest.views.hiddenCount == 4)
 
         #expect(session.me.profile?.displayName == "Alex")
-        #expect(session.me.genders.count == 3)
+        #expect(session.me.genders.count == 5)
     }
 
     @Test func filtersApply() async throws {
@@ -109,6 +109,8 @@ struct DemoTests {
         edit.aboutMe = "Updated"
         edit.position = .top
         edit.tags = [try #require(catalog.tag(forKey: "hiking"))]
+        edit.genderIDs = [4]
+        edit.pronounIDs = [1, 3]
         try await session.me.save(edit, from: original)
         #expect(session.me.profile?.tags == ["Hiking"])
         await session.me.refresh()
@@ -116,6 +118,7 @@ struct DemoTests {
         #expect(saved.aboutMe == "Updated")
         #expect(saved.position == .top)
         #expect(saved.tags == ["Hiking"])
+        #expect(saved.genderIDs == [4] && saved.pronounIDs == [1, 3])
         #expect(ProfileEdit(saved, tagCatalog: catalog).tags.map(\.key) == ["hiking"])
     }
 
