@@ -21,10 +21,9 @@ jobs:
       - name: Show Xcode
         run: xcodebuild -version
 
-      - name: Install Rust
-        run: |
-          rustup toolchain install stable --profile minimal
-          rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin
+      # Rust, cmake and perl come from the flake's Xcode shell, as on a developer's Mac.
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
 
       # Restore and save separately, so the slow BoringSSL build is kept even
       # when a later step fails.
@@ -36,11 +35,11 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             core/target
-          key: rust-${{ runner.os }}-${{ hashFiles('core/Cargo.lock', 'core/src/**') }}
+          key: rust-${{ runner.os }}-${{ hashFiles('flake.lock', 'core/Cargo.lock', 'core/src/**') }}
           restore-keys: rust-${{ runner.os }}-
 
       - name: Build the Rust bridge
-        run: scripts/build-core-xcframework.sh
+        run: nix develop --command scripts/build-core-xcframework.sh
 
       - name: Save Rust builds
         if: steps.rust-cache.outputs.cache-hit != 'true'
@@ -81,7 +80,7 @@ jobs:
         run: >
           xcodebuild test -project OpenGrind.xcodeproj -scheme OpenGrind
           -destination "id=$SIMULATOR" -derivedDataPath build/simulator
-          -resultBundlePath build/Tests.xcresult
+          -resultBundlePath build/Tests.xcresult -parallel-testing-enabled NO
 
       - name: Export screenshots
         if: always()
