@@ -34,7 +34,8 @@ struct ExploreSheet: View {
         _namedPin = State(initialValue: isExploring && start?.name != nil ? coordinate.map(PinKey.init) : nil)
         _position = State(
             initialValue: coordinate.map {
-                .region(MKCoordinateRegion(center: $0, latitudinalMeters: 20_000, longitudinalMeters: 20_000))
+                MapCameraPosition.region(
+                    MKCoordinateRegion(center: $0, latitudinalMeters: 20_000, longitudinalMeters: 20_000))
             } ?? .automatic)
     }
 
