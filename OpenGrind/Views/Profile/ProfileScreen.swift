@@ -75,6 +75,8 @@ private struct ProfileContent: View {
         .navigationTitle(name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+        // The action bar takes the tab bar's place, as in the chat.
+        .toolbar(model.isMe ? .automatic : .hidden, for: .tabBar)
         .toolbar {
             if !model.isMe, model.profile != nil {
                 ToolbarItem(placement: .primaryAction) { safetyMenu }
