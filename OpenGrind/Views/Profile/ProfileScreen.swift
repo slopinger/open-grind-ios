@@ -60,7 +60,6 @@ private struct ProfileContent: View {
                             .padding(.vertical, 20)
                     }
                 }
-                .ignoresSafeArea(edges: .top)
                 .safeAreaInset(edge: .bottom) {
                     if !model.isMe { actionBar(profile) }
                 }
@@ -74,7 +73,6 @@ private struct ProfileContent: View {
         }
         .navigationTitle(name)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         // The action bar takes the tab bar's place, as in the chat.
         .toolbar(model.isMe ? .automatic : .hidden, for: .tabBar)
         .toolbar {
@@ -169,12 +167,6 @@ private struct ProfileContent: View {
                     }
                     .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .always : .never))
                 }
-            }
-            .overlay(alignment: .top) {
-                // Keeps the navigation bar legible over light photos.
-                LinearGradient(colors: [.black.opacity(0.35), .clear], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 120)
-                    .allowsHitTesting(false)
             }
             .clipped()
     }
