@@ -191,6 +191,9 @@ actor DemoWorld {
         if let value = Self.ints(patch["vaccines"]) { profile.vaccines = Vaccine.known(value) }
         if let value = Self.bool(patch["showPosition"]) { profile.showsPosition = value }
         if let value = Self.bool(patch["showTribes"]) { profile.showsTribes = value }
+        if let keys = patch["profileTags"] as? [String] {
+            profile.tags = keys.map { Self.tagCatalog.text(forKey: $0) ?? $0 }
+        }
         if has("lastTestedDate") {
             profile.lastTested = Self.double(patch["lastTestedDate"]).map {
                 Date(milliseconds: Int64($0))

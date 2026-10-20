@@ -45,6 +45,16 @@ public struct ProfileTagCatalog: Hashable, Sendable {
         return nil
     }
 
+    /// The tag with `key`, if the catalog has it.
+    public func tag(forKey key: String) -> ProfileTag? {
+        categories.lazy.flatMap(\.tags).first { $0.key == key }
+    }
+
+    /// The tag a profile's tag value stands for: profiles carry either the key or the text.
+    public func tag(matching value: String) -> ProfileTag? {
+        tag(forKey: value) ?? categories.lazy.flatMap(\.tags).first { $0.text == value }
+    }
+
     /// Tags whose text contains `query`, each once, in catalog order.
     public func tags(matching query: String) -> [ProfileTag] {
         let query = query.trimmingCharacters(in: .whitespaces)

@@ -192,7 +192,7 @@ struct EditProfileView: View {
         Task {
             defer { isSaving = false }
             do {
-                try await me.save(edit)
+                try await me.save(edit, from: original)
                 dismiss()
             } catch {
                 failure = Failure(error)

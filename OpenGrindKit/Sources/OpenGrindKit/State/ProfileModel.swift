@@ -134,9 +134,10 @@ public final class MeModel {
 
     /// Saves an edit. Throws ``GrindrError/rejectedText`` when moderation
     /// refuses the name or text.
-    public func save(_ edit: ProfileEdit) async throws {
+    /// Saves what differs between `edit` and `original`, the edit it started from.
+    public func save(_ edit: ProfileEdit, from original: ProfileEdit) async throws {
         guard let profile else { return }
-        guard let patch = edit.patch(from: ProfileEdit(profile)) else { return }
+        guard let patch = edit.patch(from: original) else { return }
         try await api.updateProfile(patch)
         self.profile = edit.applied(to: profile)
     }

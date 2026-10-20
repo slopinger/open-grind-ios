@@ -71,6 +71,27 @@ struct RequestTests {
         #expect(applied.lookingFor == [.chat, .friends])
     }
 
+    @Test func profileTagsAreSentByKey() throws {
+        let catalog = ProfileTagCatalog(categories: [
+            ProfileTagCategory(
+                name: "Hobbies",
+                tags: [ProfileTag(key: "hiking", text: "Hiking"), ProfileTag(key: "coffee", text: "Coffee")])
+        ])
+        // Profiles carry either keys or texts; both match the catalog.
+        let original = ProfileEdit(Profile(id: 1, tags: ["Hiking", "coffee"]), tagCatalog: catalog)
+        #expect(
+            original.tags == [ProfileTag(key: "hiking", text: "Hiking"), ProfileTag(key: "coffee", text: "Coffee")])
+        #expect(original.patch(from: original) == nil)
+
+        var edit = original
+        edit.tags.remove(ProfileTag(key: "hiking", text: "Hiking"))
+        #expect(edit.patch(from: original) == .object(["profileTags": .array([.string("coffee")])]))
+        #expect(edit.applied(to: Profile(id: 1)).tags == ["Coffee"])
+
+        edit.tags = Set((0...ProfileEdit.maxTags).map { ProfileTag(key: "\($0)", text: "\($0)") })
+        #expect(!edit.isValid)
+    }
+
     @Test func profilePhotosAreUploadedWithACentredSquareThumbnail() async throws {
         let transport = FakeTransport { _ in
             .json(#"{"hash":"h","mediaId":7,"imageSizes":[{"mediaHash":"abc","state":"Pending"}]}"#)

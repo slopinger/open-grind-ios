@@ -102,13 +102,21 @@ struct DemoTests {
 
         await session.me.loadIfNeeded()
         let profile = try #require(session.me.profile)
-        var edit = ProfileEdit(profile)
+        await session.browse.loadTagCatalog()
+        let catalog = try #require(session.browse.tagCatalog)
+        let original = ProfileEdit(profile, tagCatalog: catalog)
+        var edit = original
         edit.aboutMe = "Updated"
         edit.position = .top
-        try await session.me.save(edit)
+        edit.tags = [try #require(catalog.tag(forKey: "hiking"))]
+        try await session.me.save(edit, from: original)
+        #expect(session.me.profile?.tags == ["Hiking"])
         await session.me.refresh()
-        #expect(session.me.profile?.aboutMe == "Updated")
-        #expect(session.me.profile?.position == .top)
+        let saved = try #require(session.me.profile)
+        #expect(saved.aboutMe == "Updated")
+        #expect(saved.position == .top)
+        #expect(saved.tags == ["Hiking"])
+        #expect(ProfileEdit(saved, tagCatalog: catalog).tags.map(\.key) == ["hiking"])
     }
 
     @Test func photosCanBeSent() async throws {
