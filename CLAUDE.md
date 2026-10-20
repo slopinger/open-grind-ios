@@ -43,6 +43,11 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
 - GitHub CI: `.github/workflows/ios.yml` (macos-26): xcframework, `swift test` on macOS, device build,
   simulator unit + UI tests, screenshots artifact (`gh run download <id> -n screenshots`).
   The iOS UI cannot be compiled on Linux; check CI after every app change.
+- README screenshots: `docs/screenshots/{welcome,nearby,profile,chat,messages,interest}.png`, from a
+  green CI run's `screenshots` artifact (`01-welcome`, `03-browse`, `05-profile`, `07-chat`,
+  `08-messages`, `09-interest`; names in its `manifest.json`), resized to 600 px wide with metadata
+  stripped (`magick … -resize 600x -strip`, then `oxipng -o 4 --strip all`). Refresh them when the
+  UI changes visibly.
 
 ## Gotchas
 - Swift Testing on Linux crashes when a cancelled `Task.sleep` throws; `SWT_SWIFT_ERROR_BACKTRACING_ENABLED=0`
