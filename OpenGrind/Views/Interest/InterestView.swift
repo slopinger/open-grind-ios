@@ -136,7 +136,7 @@ private struct InterestRow<Accessory: View>: View {
                 .blur(radius: isLocked ? 8 : 0)
                 .clipShape(.circle)
             VStack(alignment: .leading, spacing: 2) {
-                Text(isLocked ? String(localized: "Someone") : (name ?? String(localized: "No name")))
+                Text(isLocked ? String(localized: "Someone") : Formatting.name(name))
                     .font(.body.weight(.medium))
                     .lineLimit(1)
                 let details = [date.map { Formatting.listTime($0) }, Formatting.distance(distance)]

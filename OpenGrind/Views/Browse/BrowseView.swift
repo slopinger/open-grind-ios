@@ -275,7 +275,7 @@ struct ProfileTile: View {
     }
 
     private var accessibilityLabel: Text {
-        var parts: [String] = [profile.displayName ?? String(localized: "No name")]
+        var parts: [String] = [Formatting.name(profile.displayName)]
         if let age = profile.age { parts.append(String(localized: "\(age) years")) }
         if let distance = Formatting.distance(profile.distance) { parts.append(distance) }
         if profile.isOnline() { parts.append(String(localized: "Online")) }

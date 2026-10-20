@@ -46,7 +46,7 @@ private struct ProfileContent: View {
     @State private var hasBlocked = false
 
     private var name: String {
-        model.profile?.displayName ?? String(localized: "No name")
+        Formatting.name(model.profile?.displayName)
     }
 
     var body: some View {

@@ -44,7 +44,7 @@ struct ProfileDetails: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(profile.displayName ?? String(localized: "No name"))
+                Text(Formatting.name(profile.displayName))
                     .font(.title.bold())
                 if profile.showsAge, let age = profile.age {
                     Text(age, format: .number)

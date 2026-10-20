@@ -3,6 +3,12 @@ import OpenGrindKit
 
 /// Text for distances, sizes and times, in the user's locale and units.
 enum Formatting {
+    /// A profile's name, or "No name" for profiles without one.
+    static func name(_ displayName: String?) -> String {
+        guard let displayName, !displayName.isEmpty else { return String(localized: "No name") }
+        return displayName
+    }
+
     /// "350 m" / "1.2 km" (or feet and miles), "Nearby" under 100 m, "~" when approximate.
     static func distance(_ meters: Double?, approximate: Bool = false) -> String? {
         guard let meters, meters >= 0 else { return nil }

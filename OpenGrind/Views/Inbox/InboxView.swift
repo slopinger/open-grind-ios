@@ -202,7 +202,7 @@ struct ConversationRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(conversation.name.isEmpty ? String(localized: "No name") : conversation.name)
+                    Text(Formatting.name(conversation.name))
                         .font(.body.weight(isUnread ? .semibold : .regular))
                         .lineLimit(1)
                     if conversation.isFavorite {

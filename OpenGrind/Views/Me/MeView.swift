@@ -94,7 +94,7 @@ struct MeView: View {
             Avatar(photoHash: me.profile?.primaryPhoto?.mediaHash, size: 64)
             VStack(alignment: .leading, spacing: 2) {
                 if let profile = me.profile {
-                    Text(profile.displayName ?? String(localized: "No name"))
+                    Text(Formatting.name(profile.displayName))
                         .font(.title3.bold())
                     if let age = profile.age {
                         Text("\(age) years")
@@ -132,7 +132,7 @@ struct BlockedProfilesView: View {
                 HStack(spacing: 12) {
                     Avatar(photoHash: entry.summary?.photoHash, size: 44)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(entry.summary?.displayName ?? String(localized: "No name"))
+                        Text(Formatting.name(entry.summary?.displayName))
                         if let date = entry.blockedAt {
                             Text("Blocked \(date.formatted(date: .abbreviated, time: .omitted))")
                                 .font(.subheadline)
