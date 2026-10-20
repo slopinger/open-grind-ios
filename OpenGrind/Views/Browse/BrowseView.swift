@@ -45,6 +45,8 @@ struct BrowseView: View {
                 ProgressView()
                     .controlSize(.large)
             }
+        case .failed(.grindr(.requiresSubscription)) where browse.exploring != nil && browse.profiles.isEmpty:
+            withBar { exploreUnavailable }
         case .failed(let failure) where browse.profiles.isEmpty:
             withBar {
                 FailureView(failure: failure) { await browse.refresh() }
@@ -98,6 +100,20 @@ struct BrowseView: View {
             }
         }
         .refreshable { await browse.refresh() }
+    }
+
+    /// Grindr answers exploring with an error unless the account has a paid subscription.
+    private var exploreUnavailable: some View {
+        ContentUnavailableView {
+            Label("Exploring Needs a Subscription", systemImage: "lock")
+        } description: {
+            Text("Grindr only lets XTRA and Unlimited members look around other places.")
+        } actions: {
+            Button("Back to My Location") {
+                Task { await browse.explore(nil) }
+            }
+            .buttonStyle(.bordered)
+        }
     }
 
     @ViewBuilder

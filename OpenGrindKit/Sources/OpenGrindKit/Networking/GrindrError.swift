@@ -53,20 +53,38 @@ public enum GrindrError: Error, Sendable, Hashable {
     static func from(_ response: APIResponse) -> GrindrError {
         struct Body: Decodable {
             var type: String?
-            var code: Int?
+            /// A number, or text such as `CAS-4001`.
+            var code: String?
             var message: String?
+
+            enum CodingKeys: String, CodingKey { case type, code, message }
+
+            init(from decoder: any Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                type = container.lenient(String.self, forKey: .type)
+                code =
+                    container.lenient(String.self, forKey: .code)
+                    ?? container.lenient(Int.self, forKey: .code).map(String.init)
+                message = container.lenient(String.self, forKey: .message)
+            }
         }
         let body = try? JSON.decode(Body.self, from: response.body)
         let urn = body?.type.flatMap { $0.hasPrefix("urn:gr:err:") ? $0 : nil }
-        switch (response.status, urn) {
+        // Some endpoints, such as the cascade, answer with just a code as text.
+        let text =
+            body == nil
+            ? String(data: response.body.prefix(64), encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) : nil
+        let code = urn ?? body?.code ?? text.flatMap { $0.wholeMatch(of: /[A-Z]+-\d+/) != nil ? $0 : nil }
+        switch (response.status, code) {
         case (401, _): return .unauthorized
         case (429, _): return .rateLimited
-        case (_, "urn:gr:err:tiered_feature"): return .requiresSubscription
+        // Exploring another place is only for paid subscriptions (seen as a bare "CAS-4001").
+        case (_, "urn:gr:err:tiered_feature"), (_, "CAS-4001"): return .requiresSubscription
         case (_, "urn:gr:err:hit_banned_terms"): return .rejectedText
         case (403, "urn:gr:err:unauthorized_action"), (404, _): return .unavailable
         default:
-            return .server(
-                status: response.status, code: urn ?? body?.code.map(String.init), message: body?.message)
+            return .server(status: response.status, code: code, message: body?.message)
         }
     }
 }

@@ -243,6 +243,12 @@ struct DecodingTests {
             GrindrError.from(.json(#"{"code":27,"message":"nope"}"#, status: 400))
                 == .server(status: 400, code: "27", message: "nope"))
         #expect(GrindrError.from(.json("<html>", status: 503)).isTransient)
+        #expect(
+            GrindrError.from(.json("CAS-4001", status: 403)) == .requiresSubscription,
+            "exploring without a subscription")
+        #expect(GrindrError.from(.json(#"{"code":"CAS-4001"}"#, status: 400)) == .requiresSubscription)
+        #expect(
+            GrindrError.from(.json("CAS-1234", status: 400)) == .server(status: 400, code: "CAS-1234", message: nil))
     }
 
     @Test func credentialsNameTheirProfile() {
