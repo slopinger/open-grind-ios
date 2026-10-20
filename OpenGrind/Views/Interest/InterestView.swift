@@ -23,15 +23,16 @@ struct InterestView: View {
                 }
             }
             .navigationTitle("Interest")
-            .safeAreaInset(edge: .top, spacing: 0) {
-                Picker("Show", selection: $section) {
-                    Text("Taps").tag(Section.taps)
-                    Text("Views").tag(Section.views)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Picker("Show", selection: $section) {
+                        Text("Taps").tag(Section.taps)
+                        Text("Views").tag(Section.views)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 220)
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-                .background(.bar)
             }
             .refreshable { await interest.refresh() }
             .routeDestinations()
