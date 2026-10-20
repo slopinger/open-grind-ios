@@ -23,13 +23,16 @@ Everyone shown is made up; the avatars are DiceBear's Notionists by Zoish (CC0).
 ## Features
 
 - **Browse**: the nearby grid with presence, favorites and unread counts; filters for age, height,
-  weight, position, tribes, looking for and more; pull to refresh and endless scrolling.
+  weight, position, tribes, looking for, profile tags and more; pull to refresh and endless
+  scrolling. **Explore** another place by searching for a city or moving a pin on a map; your own
+  location stays where it is.
 - **Profiles**: photo pager with a zoomable full-screen viewer, every profile detail, taps,
   favorites, and hide, block and report.
 - **Messages**: the inbox with search, filters, pin, mute and delete; chats with live updates,
   typing and read indicators, photos, stickers, GIFs, locations, hearts, unsend and retry.
 - **Interest**: taps and profile views.
-- **Your profile**: edit every field Grindr allows, and manage blocked profiles.
+- **Your profile**: edit every field Grindr allows; add, reorder and delete photos (new ones are
+  marked while Grindr reviews them); manage blocked profiles.
 - **Demo**: try every screen with made-up profiles, without an account.
 
 Built to Apple's Human Interface Guidelines: system navigation, tab bar and sheets; Dynamic Type,
@@ -52,7 +55,9 @@ Only email and password. Other methods were looked into:
 
 - Your location is rounded to a 0.001° grid (about 100 m) before it is sent.
 - The session token is kept in the Keychain (this device only); your password is never stored.
-- Photos you send are re-encoded, which removes EXIF data such as where they were taken.
+- Photos you send or upload are re-encoded, which removes EXIF data such as where they were taken.
+- Exploring also sends the explored place, rounded the same way; place search and names come
+  from Apple Maps.
 - Photos are cached for a week and removed when you sign out. No analytics, no crash reporting.
 
 ## How it works

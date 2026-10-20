@@ -64,4 +64,12 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   api.dicebear.com through URLSession (demo only). Real media goes through the transport and the
   host allowlist in `MediaURL`.
 - Location is coarsened to 0.001° (`Geohash.coarsen`) in `GrindrAPI` before it is sent.
+- Profile photos (not in grindr.rs, taken from upstream Open Grind): `POST /v4/media/upload?takenOnGrindr=false
+  &thumbCoords=bottom,left,right,top` (raw JPEG, square thumbnail or it's dropped), then
+  `PUT /v3/me/profile/images {primaryImageHash, secondaryImageHashes}` (max 6 in total);
+  `DELETE /v3/me/profile/images {media_hashes}`. New photos are "Pending" until moderated.
+- Tags: catalog `GET /v1/tags` (per language, first one used), cascade filter `tags=key1,key2`;
+  profiles carry tag texts. Explore: `exploreGeoHash` next to `nearbyGeoHash` on `/v4/cascade`.
+- The UI tour also keeps `11-tags`, `12-explore`, `13-exploring`, `14-photos`, `15-photo-menu`,
+  `16-photos-reordered`.
 - Never sign in with a real account from tests or CI; there are no Grindr credentials for this project.
