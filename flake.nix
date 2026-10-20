@@ -115,6 +115,12 @@
           ];
           shellHook = ''
             unset DEVELOPER_DIR SDKROOT MACOSX_DEPLOYMENT_TARGET NIX_CFLAGS_COMPILE NIX_LDFLAGS
+            # The toolchain brings Nix's clang wrapper, which only targets macOS; cc-rs,
+            # cmake and cargo must use Xcode's compilers (the /usr/bin shims) instead.
+            export CC=/usr/bin/clang CXX=/usr/bin/clang++ AR=/usr/bin/ar
+            for target in AARCH64_APPLE_IOS AARCH64_APPLE_IOS_SIM AARCH64_APPLE_DARWIN; do
+              export "CARGO_TARGET_''${target}_LINKER=/usr/bin/clang"
+            done
             if ! /usr/bin/xcode-select -p >/dev/null 2>&1; then
               echo "Install Xcode 26 and run xcode-select first." >&2
             fi
