@@ -308,7 +308,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
         filters.tribes = ids("tribes")
         filters.tags = Set((query["tags"] ?? "").split(separator: ",").map(String.init))
         let page = await world.gridPage(
-            filters: filters, page: query["pageNumber"].flatMap(Int.init) ?? 1)
+            filters: filters, exploring: query["exploreGeoHash"], page: query["pageNumber"].flatMap(Int.init) ?? 1)
         var items = page.profiles.map { profile -> JSONValue in
             .object(["type": .string("full_profile_v1"), "data": Self.encodeGridData(profile)])
         }

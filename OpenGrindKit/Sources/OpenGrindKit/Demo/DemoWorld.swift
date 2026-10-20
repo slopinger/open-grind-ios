@@ -82,9 +82,17 @@ actor DemoWorld {
 
     // MARK: Queries
 
-    func gridPage(filters: BrowseFilters, page: Int) -> (profiles: [Profile], nextPage: Int?) {
+    /// A page of the grid. Exploring another place shows the same people in
+    /// another order, so the grid visibly changes.
+    func gridPage(filters: BrowseFilters, exploring: String? = nil, page: Int) -> (profiles: [Profile], nextPage: Int?)
+    {
         let pageSize = 30
         let blockedIDs = Set(blocked.map(\.id))
+        var order = order
+        if let exploring, !order.isEmpty {
+            let offset = exploring.unicodeScalars.reduce(0) { $0 &+ Int($1.value) } % order.count
+            order = Array((order[offset...] + order[..<offset]).reversed())
+        }
         let matching = order.compactMap { people[$0]?.profile }.filter { profile in
             guard !blockedIDs.contains(profile.id), !hidden.contains(profile.id) else { return false }
             if filters.onlineOnly, !profile.isOnline(at: now) { return false }

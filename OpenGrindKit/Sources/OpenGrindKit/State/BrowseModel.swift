@@ -93,6 +93,11 @@ public final class BrowseModel {
 
     /// Shows the profiles around `place` instead of around you, or around you
     /// again when `nil`.
+    /// Where you were when the grid last loaded, to start a map at.
+    public var currentPlace: ExplorePlace? {
+        geohash.flatMap(Geohash.decode).map { ExplorePlace(latitude: $0.latitude, longitude: $0.longitude) }
+    }
+
     public func explore(_ place: ExplorePlace?) async {
         guard place != exploring else { return }
         exploring = place

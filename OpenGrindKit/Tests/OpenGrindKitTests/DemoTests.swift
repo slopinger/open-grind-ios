@@ -144,4 +144,18 @@ struct DemoTests {
         #expect(me.profile?.photos == before)
         #expect(me.actionFailure == nil)
     }
+
+    @Test func exploringAnotherPlaceChangesTheGrid() async throws {
+        let session = try await signedIn()
+        let browse = session.browse
+        await browse.loadIfNeeded()
+        let nearby = browse.profiles.map(\.id)
+        let home = try #require(browse.currentPlace)
+        await browse.explore(ExplorePlace(latitude: 40.7128, longitude: -74.006, name: "New York"))
+        #expect(browse.exploring?.name == "New York")
+        #expect(!browse.profiles.isEmpty && browse.profiles.map(\.id) != nearby)
+        #expect(browse.currentPlace == home, "exploring doesn't move you")
+        await browse.explore(nil)
+        #expect(browse.profiles.map(\.id) == nearby)
+    }
 }
