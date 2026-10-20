@@ -27,6 +27,12 @@ public final class ProfileModel: Identifiable {
 
     public var isMe: Bool { profileID == session.profileID }
 
+    /// Loads the profile unless it is loaded already, e.g. when coming back from the chat.
+    public func loadIfNeeded() async {
+        guard state.needsLoad else { return }
+        await load()
+    }
+
     public func load() async {
         if profile == nil { state = .loading }
         do {
@@ -78,8 +84,10 @@ public final class ProfileModel: Identifiable {
         session.browse.remove(profileID)
     }
 
-    public func report(_ report: ProfileReport) async throws {
+    /// Reports the profile to Grindr, and blocks it too when `alsoBlock` is set.
+    public func report(_ report: ProfileReport, alsoBlock: Bool) async throws {
         try await session.api.report(profileID, report)
+        if alsoBlock { try await block() }
     }
 
     public var chat: ChatModel {

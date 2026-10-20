@@ -78,7 +78,7 @@ private struct ProfileContent: View {
                 ToolbarItem(placement: .primaryAction) { safetyMenu }
             }
         }
-        .task { await model.load() }
+        .task { await model.loadIfNeeded() }
         .confirmationDialog(
             "Block \(name)?", isPresented: $isConfirmingBlock, titleVisibility: .visible
         ) {
@@ -100,11 +100,8 @@ private struct ProfileContent: View {
             }
         ) {
             ReportSheet(name: name) { report, alsoBlock in
-                try await model.report(report)
-                if alsoBlock {
-                    try await model.block()
-                    hasBlocked = true
-                }
+                try await model.report(report, alsoBlock: alsoBlock)
+                hasBlocked = alsoBlock
             }
         }
         .fullScreenCover(item: $viewerPhoto) { selection in
