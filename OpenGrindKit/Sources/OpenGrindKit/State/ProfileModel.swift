@@ -103,7 +103,7 @@ public final class MeModel {
     public private(set) var state: LoadState = .idle
     public private(set) var blocked: [BlockedEntry] = []
     public private(set) var blockedState: LoadState = .idle
-    public private(set) var isUploadingPhoto = false
+    public private(set) var isUploadingPhotos = false
     public var actionFailure: Failure?
 
     /// A blocked profile with what is known about it.
@@ -159,21 +159,43 @@ public final class MeModel {
     /// Grindr allows a main photo and five more.
     public static let maxPhotos = 6
 
-    public var canAddPhoto: Bool { (profile?.photos.count ?? 0) < Self.maxPhotos && !isUploadingPhoto }
+    /// How many more photos fit on your profile.
+    public var remainingPhotoSlots: Int { max(Self.maxPhotos - (profile?.photos.count ?? 0), 0) }
 
-    /// Uploads a JPEG and adds it as your last photo.
-    public func addPhoto(_ jpeg: Data, width: Int, height: Int) async {
-        guard canAddPhoto else { return }
-        isUploadingPhoto = true
-        defer { isUploadingPhoto = false }
-        do {
-            let photo = try await api.uploadProfilePhoto(jpeg, width: width, height: height)
-            let photos = (profile?.photos ?? []) + [photo]
-            try await api.setProfilePhotos(photos.map(\.mediaHash))
-            profile?.photos = photos
-        } catch {
-            actionFailure = Failure(error)
+    /// Uploads JPEGs and adds them after your other photos. Photos that were
+    /// uploaded before one fails are still added.
+    public func addPhotos(_ jpegs: [JPEGPhoto]) async {
+        guard !isUploadingPhotos, let existing = profile?.photos else { return }
+        isUploadingPhotos = true
+        defer { isUploadingPhotos = false }
+        var added: [ProfilePhoto] = []
+        var failure: Failure?
+        for jpeg in jpegs.prefix(remainingPhotoSlots) {
+            do {
+                added.append(try await api.uploadProfilePhoto(jpeg.data, width: jpeg.width, height: jpeg.height))
+            } catch {
+                failure = Failure(error)
+                break
+            }
         }
+        if !added.isEmpty {
+            let photos = existing + added
+            do {
+                try await api.setProfilePhotos(photos.map(\.mediaHash))
+                profile?.photos = photos
+            } catch {
+                failure = Failure(error)
+            }
+        }
+        if let failure { actionFailure = failure }
+    }
+
+    /// Moves a photo to `destination`; position 0 makes it the main photo.
+    public func movePhoto(_ photo: ProfilePhoto, to destination: Int) async {
+        guard var photos = profile?.photos, let index = photos.firstIndex(of: photo) else { return }
+        photos.remove(at: index)
+        photos.insert(photo, at: min(max(destination, 0), photos.count))
+        await setPhotoOrder(photos)
     }
 
     /// Saves a new order; the first photo becomes the main one.

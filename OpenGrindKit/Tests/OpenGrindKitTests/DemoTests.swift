@@ -164,7 +164,7 @@ struct DemoTests {
         let me = session.me
         await me.loadIfNeeded()
         let before = try #require(me.profile?.photos)
-        await me.addPhoto(Data([0xFF, 0xD8, 0xFF]), width: 400, height: 300)
+        await me.addPhotos([JPEGPhoto(data: Data([0xFF, 0xD8, 0xFF]), width: 400, height: 300)])
         let added = try #require(me.profile?.photos.last)
         #expect(me.profile?.photos.count == before.count + 1)
         #expect(added.isPendingReview)

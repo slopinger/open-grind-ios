@@ -15,6 +15,19 @@ public struct ProfilePhoto: Hashable, Sendable, Identifiable {
     }
 }
 
+/// A JPEG ready to upload, with its size in pixels.
+public struct JPEGPhoto: Sendable {
+    public var data: Data
+    public var width: Int
+    public var height: Int
+
+    public init(data: Data, width: Int, height: Int) {
+        self.data = data
+        self.width = width
+        self.height = height
+    }
+}
+
 /// Something that can be online, such as a profile or a tap.
 public protocol OnlinePresence {
     /// Until when the server counts it as online; `nil` when it is not.

@@ -12,7 +12,6 @@ struct EditPhotosView: View {
 
     private var me: MeModel { session.me }
     private var photos: [ProfilePhoto] { me.profile?.photos ?? [] }
-    private var remainingSlots: Int { MeModel.maxPhotos - photos.count }
 
     var body: some View {
         @Bindable var me = me
@@ -22,12 +21,12 @@ struct EditPhotosView: View {
                     ForEach(photos) { photo in
                         tile(photo)
                     }
-                    if me.isUploadingPhoto {
+                    if me.isUploadingPhotos {
                         PhotoSlot {
                             ProgressView()
-                                .accessibilityLabel("Uploading photo")
+                                .accessibilityLabel("Uploading photos")
                         }
-                    } else if remainingSlots > 0 {
+                    } else if me.remainingPhotoSlots > 0 {
                         addButton
                     }
                 }
@@ -45,7 +44,7 @@ struct EditPhotosView: View {
         // The modifier rather than a PhotosPicker view: PhotosPicker's label closure is
         // @Sendable and nonisolated, so it can't build this screen's main-actor views.
         .photosPicker(
-            isPresented: $isPickingPhotos, selection: $pickerItems, maxSelectionCount: max(remainingSlots, 1),
+            isPresented: $isPickingPhotos, selection: $pickerItems, maxSelectionCount: max(me.remainingPhotoSlots, 1),
             matching: .images, preferredItemEncoding: .compatible
         )
         .onChange(of: pickerItems) { _, items in
@@ -136,30 +135,25 @@ struct EditPhotosView: View {
     }
 
     private func move(_ photo: ProfilePhoto, to destination: Int) {
-        var order = photos
-        guard let index = order.firstIndex(of: photo) else { return }
-        order.remove(at: index)
-        order.insert(photo, at: destination)
-        Task { await me.setPhotoOrder(order) }
+        Task { await me.movePhoto(photo, to: destination) }
     }
 
+    /// Prepares the picked photos, then adds the ones that could be read in one go.
     private func upload(_ items: [PhotosPickerItem]) async {
+        var jpegs: [JPEGPhoto] = []
         for item in items {
             do {
-                guard let data = try await item.loadTransferable(type: Data.self),
-                    let photo = await PhotoEncoder.jpeg(from: data)
-                else {
+                if let jpeg = try await PhotoEncoder.jpeg(from: item) {
+                    jpegs.append(jpeg)
+                } else {
                     encodingFailure = .unexpected("unreadable photo")
-                    continue
                 }
-                await me.addPhoto(photo.data, width: photo.width, height: photo.height)
-                if me.actionFailure != nil { return }
             } catch {
                 encodingFailure = Failure(error)
             }
         }
+        await me.addPhotos(jpegs)
     }
-
 }
 
 /// A square tile in the photo grid.

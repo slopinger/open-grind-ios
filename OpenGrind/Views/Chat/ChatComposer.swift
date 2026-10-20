@@ -59,9 +59,7 @@ struct ChatComposer: View {
 
     private func sendPhoto(_ item: PhotosPickerItem) async {
         do {
-            guard let data = try await item.loadTransferable(type: Data.self),
-                let photo = await PhotoEncoder.jpeg(from: data)
-            else {
+            guard let photo = try await PhotoEncoder.jpeg(from: item) else {
                 photoFailure = .unexpected("unreadable photo")
                 return
             }
