@@ -66,9 +66,7 @@ private struct ProfileContent: View {
             } else if let failure = model.state.failure {
                 FailureView(failure: failure) { await model.load() }
             } else {
-                ProgressView()
-                    .controlSize(.large)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                LoadingView()
             }
         }
         .navigationTitle(name)

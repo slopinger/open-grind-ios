@@ -54,7 +54,8 @@ struct EditPhotosView: View {
             Task { await upload(items) }
         }
         .confirmationDialog(
-            "Delete Photo?", isPresented: isConfirmingDelete, titleVisibility: .visible, presenting: pendingDelete
+            "Delete Photo?", isPresented: $pendingDelete.isPresent(), titleVisibility: .visible,
+            presenting: pendingDelete
         ) { photo in
             Button("Delete Photo", role: .destructive) { Task { await me.deletePhoto(photo) } }
         } message: { _ in
@@ -159,9 +160,6 @@ struct EditPhotosView: View {
         }
     }
 
-    private var isConfirmingDelete: Binding<Bool> {
-        Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } })
-    }
 }
 
 /// A square tile in the photo grid.

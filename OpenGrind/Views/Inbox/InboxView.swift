@@ -28,7 +28,7 @@ struct InboxView: View {
                 }
                 .routeDestinations()
                 .confirmationDialog(
-                    "Delete Conversation?", isPresented: isConfirmingDelete, titleVisibility: .visible,
+                    "Delete Conversation?", isPresented: $pendingDelete.isPresent(), titleVisibility: .visible,
                     presenting: pendingDelete
                 ) { conversation in
                     Button("Delete", role: .destructive) {
@@ -49,17 +49,10 @@ struct InboxView: View {
         .task { await inbox.loadIfNeeded() }
     }
 
-    @ViewBuilder
     private var content: some View {
-        switch inbox.state {
-        case .idle,
-            .loading where inbox.conversations.isEmpty:
-            ProgressView()
-                .controlSize(.large)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case .failed(let failure) where inbox.conversations.isEmpty:
-            FailureView(failure: failure) { await inbox.refresh() }
-        default:
+        LoadStateView(inbox.state, isEmpty: inbox.conversations.isEmpty) {
+            await inbox.refresh()
+        } content: {
             list
                 .overlay {
                     if inbox.conversations.isEmpty {
@@ -145,10 +138,6 @@ struct InboxView: View {
             Divider()
             Button("Delete", systemImage: "trash", role: .destructive) { pendingDelete = conversation }
         }
-    }
-
-    private var isConfirmingDelete: Binding<Bool> {
-        Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } })
     }
 
     private var filterMenu: some View {

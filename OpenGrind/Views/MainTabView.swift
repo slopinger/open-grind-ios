@@ -47,19 +47,13 @@ struct MainTabView: View {
             if tab == .interest { session.interest.markSeen() }
         }
         .alert(
-            "Your Account Is Restricted", isPresented: isShowingRestriction,
+            "Your Account Is Restricted", isPresented: Bindable(app.account).restriction.isPresent(),
             presenting: app.account.restriction
         ) { _ in
             Button("OK", role: .cancel) {}
         } message: { restriction in
             Text(Self.explanation(of: restriction))
         }
-    }
-
-    private var isShowingRestriction: Binding<Bool> {
-        Binding(
-            get: { app.account.restriction != nil },
-            set: { if !$0 { app.account.restriction = nil } })
     }
 
     private static func explanation(of restriction: AccountRestriction) -> String {

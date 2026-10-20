@@ -51,9 +51,7 @@ struct TagPickerList: View {
             } else if let failure = browse.tagCatalogState.failure {
                 FailureView(failure: failure) { await browse.loadTagCatalog() }
             } else {
-                ProgressView()
-                    .controlSize(.large)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                LoadingView()
             }
         }
         .navigationTitle("Tags")

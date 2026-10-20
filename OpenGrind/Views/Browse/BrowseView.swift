@@ -38,25 +38,26 @@ struct BrowseView: View {
 
     @ViewBuilder
     private var content: some View {
-        switch browse.state {
-        case .idle,
-            .loading where browse.profiles.isEmpty:
-            withBar {
-                ProgressView()
-                    .controlSize(.large)
+        if browse.profiles.isEmpty {
+            VStack(spacing: 0) {
+                bar
+                LoadStateView(
+                    browse.state, isEmpty: true, retry: { await browse.refresh() }, recovery: backToMyLocation
+                ) {
+                    emptyState
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-        case .failed(.grindr(.requiresSubscription)) where browse.exploring != nil && browse.profiles.isEmpty:
-            withBar { exploreUnavailable }
-        case .failed(let failure) where browse.profiles.isEmpty:
-            withBar {
-                FailureView(failure: failure) { await browse.refresh() }
-            }
-        default:
-            if browse.profiles.isEmpty {
-                withBar { emptyState }
-            } else {
-                grid
-            }
+        } else {
+            grid
+        }
+    }
+
+    /// Exploring can fail for good, e.g. without a subscription; this always works.
+    private var backToMyLocation: FailureView.Recovery? {
+        guard browse.exploring != nil else { return nil }
+        return FailureView.Recovery(title: "Back to My Location") {
+            Task { await browse.explore(nil) }
         }
     }
 
@@ -69,14 +70,6 @@ struct BrowseView: View {
             Task { await browse.explore(nil) }
         } showFilters: {
             isShowingFilters = true
-        }
-    }
-
-    private func withBar(@ViewBuilder _ content: () -> some View) -> some View {
-        VStack(spacing: 0) {
-            bar
-            content()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -100,20 +93,6 @@ struct BrowseView: View {
             }
         }
         .refreshable { await browse.refresh() }
-    }
-
-    /// Grindr answers exploring with an error unless the account has a paid subscription.
-    private var exploreUnavailable: some View {
-        ContentUnavailableView {
-            Label("Exploring Needs a Subscription", systemImage: "lock")
-        } description: {
-            Text("Grindr only lets XTRA and Unlimited members look around other places.")
-        } actions: {
-            Button("Back to My Location") {
-                Task { await browse.explore(nil) }
-            }
-            .buttonStyle(.bordered)
-        }
     }
 
     @ViewBuilder

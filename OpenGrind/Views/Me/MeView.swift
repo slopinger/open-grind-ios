@@ -126,48 +126,40 @@ struct BlockedProfilesView: View {
 
     var body: some View {
         @Bindable var me = me
-        Group {
-            switch me.blockedState {
-            case .idle,
-                .loading where me.blocked.isEmpty:
-                ProgressView()
-                    .controlSize(.large)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            case .failed(let failure) where me.blocked.isEmpty:
-                FailureView(failure: failure) { await me.loadBlocked() }
-            default:
-                List(me.blocked) { entry in
-                    HStack(spacing: 12) {
-                        Avatar(photoHash: entry.summary?.photoHash, size: 44)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.summary?.displayName ?? String(localized: "No name"))
-                            if let date = entry.blockedAt {
-                                Text("Blocked \(date.formatted(date: .abbreviated, time: .omitted))")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
+        LoadStateView(me.blockedState, isEmpty: me.blocked.isEmpty) {
+            await me.loadBlocked()
+        } content: {
+            List(me.blocked) { entry in
+                HStack(spacing: 12) {
+                    Avatar(photoHash: entry.summary?.photoHash, size: 44)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(entry.summary?.displayName ?? String(localized: "No name"))
+                        if let date = entry.blockedAt {
+                            Text("Blocked \(date.formatted(date: .abbreviated, time: .omitted))")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
                         }
-                        Spacer()
-                        Button("Unblock") { pendingUnblock = entry }
-                            .buttonStyle(.bordered)
                     }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityAction(named: "Unblock") { pendingUnblock = entry }
+                    Spacer()
+                    Button("Unblock") { pendingUnblock = entry }
+                        .buttonStyle(.bordered)
                 }
-                .overlay {
-                    if me.blocked.isEmpty {
-                        ContentUnavailableView(
-                            "No Blocked Profiles", systemImage: "hand.raised",
-                            description: Text("Profiles you block appear here."))
-                    }
-                }
-                .refreshable { await me.loadBlocked() }
+                .accessibilityElement(children: .combine)
+                .accessibilityAction(named: "Unblock") { pendingUnblock = entry }
             }
+            .overlay {
+                if me.blocked.isEmpty {
+                    ContentUnavailableView(
+                        "No Blocked Profiles", systemImage: "hand.raised",
+                        description: Text("Profiles you block appear here."))
+                }
+            }
+            .refreshable { await me.loadBlocked() }
         }
         .navigationTitle("Blocked")
         .task { await me.loadBlocked() }
         .confirmationDialog(
-            "Unblock?", isPresented: isConfirming, titleVisibility: .visible, presenting: pendingUnblock
+            "Unblock?", isPresented: $pendingUnblock.isPresent(), titleVisibility: .visible, presenting: pendingUnblock
         ) { entry in
             Button("Unblock") { Task { await me.unblock(entry) } }
         } message: { _ in
@@ -176,7 +168,4 @@ struct BlockedProfilesView: View {
         .failureAlert($me.actionFailure)
     }
 
-    private var isConfirming: Binding<Bool> {
-        Binding(get: { pendingUnblock != nil }, set: { if !$0 { pendingUnblock = nil } })
-    }
 }

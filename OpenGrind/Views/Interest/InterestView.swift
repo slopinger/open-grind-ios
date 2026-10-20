@@ -40,15 +40,10 @@ struct InterestView: View {
         .task { await interest.loadIfNeeded() }
     }
 
-    @ViewBuilder
     private var taps: some View {
-        switch interest.tapsState {
-        case .idle,
-            .loading where interest.taps.isEmpty:
-            loading
-        case .failed(let failure) where interest.taps.isEmpty:
-            FailureView(failure: failure) { await interest.refreshTaps() }
-        default:
+        LoadStateView(interest.tapsState, isEmpty: interest.taps.isEmpty) {
+            await interest.refreshTaps()
+        } content: {
             List(interest.taps) { tap in
                 let row = InterestRow(
                     name: tap.displayName, photoHash: tap.photoHash, isOnline: tap.isOnline(), date: tap.date,
@@ -85,15 +80,10 @@ struct InterestView: View {
         }
     }
 
-    @ViewBuilder
     private var views: some View {
-        switch interest.viewsState {
-        case .idle,
-            .loading where interest.views.viewers.isEmpty:
-            loading
-        case .failed(let failure) where interest.views.viewers.isEmpty:
-            FailureView(failure: failure) { await interest.refreshViews() }
-        default:
+        LoadStateView(interest.viewsState, isEmpty: interest.views.viewers.isEmpty) {
+            await interest.refreshViews()
+        } content: {
             List {
                 SwiftUI.Section {
                     ForEach(interest.views.viewers) { viewer in
@@ -128,12 +118,6 @@ struct InterestView: View {
                 }
             }
         }
-    }
-
-    private var loading: some View {
-        ProgressView()
-            .controlSize(.large)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

@@ -40,6 +40,14 @@ struct FailureText {
         failure == .location(.denied)
     }
 
+    /// Whether trying the same thing again could work.
+    static func canRetry(_ failure: Failure) -> Bool {
+        switch failure {
+        case .grindr(.requiresSubscription), .grindr(.rejectedText), .grindr(.banned), .location(.restricted): false
+        default: true
+        }
+    }
+
     private static func describe(_ error: GrindrError) -> (String, String, String) {
         switch error {
         case .offline:

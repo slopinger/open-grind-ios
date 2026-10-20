@@ -47,14 +47,3 @@ struct WheelPickerRow<Value: Hashable, Options: View>: View {
         }
     }
 }
-
-extension Binding where Value == String? {
-    /// Whether the wheel `id` is the open one; a form keeps one open at a time.
-    func isOpen(_ id: String) -> Binding<Bool> {
-        Binding<Bool> {
-            wrappedValue == id
-        } set: { isOpen in
-            wrappedValue = isOpen ? id : nil
-        }
-    }
-}

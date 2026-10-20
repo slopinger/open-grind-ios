@@ -65,17 +65,10 @@ private struct ChatContent: View {
             .failureAlert($chat.actionFailure)
     }
 
-    @ViewBuilder
     private var content: some View {
-        switch chat.state {
-        case .idle,
-            .loading where chat.items.isEmpty:
-            ProgressView()
-                .controlSize(.large)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case .failed(let failure) where chat.items.isEmpty:
-            FailureView(failure: failure) { await chat.reload() }
-        default:
+        LoadStateView(chat.state, isEmpty: chat.items.isEmpty) {
+            await chat.reload()
+        } content: {
             if chat.items.isEmpty && !chat.isOtherTyping {
                 ContentUnavailableView {
                     Label("Say Hi", systemImage: "hand.wave")
