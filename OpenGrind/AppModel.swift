@@ -69,7 +69,8 @@ final class AppModel {
             let account = AccountController(
                 transport: transport,
                 credentials: InMemoryCredentialStore(credentials: DemoTransport.credentials),
-                location: FixedLocation(geohash: DemoTransport.geohash), isDemo: true)
+                location: FixedLocation(geohash: DemoTransport.geohash), preferences: DefaultsPreferenceStore(),
+                isDemo: true)
             return (account, ImagePipeline(transport: transport), nil)
         }
 
@@ -90,7 +91,8 @@ final class AppModel {
             }
         }
         transport.onDeviceRotated = { [keychain] device in keychain.device = device }
-        let account = AccountController(transport: transport, credentials: keychain, location: location)
+        let account = AccountController(
+            transport: transport, credentials: keychain, location: location, preferences: DefaultsPreferenceStore())
         return (account, ImagePipeline(transport: transport), nil)
     }
 }

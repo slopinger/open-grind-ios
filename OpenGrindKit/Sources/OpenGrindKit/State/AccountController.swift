@@ -27,18 +27,20 @@ public final class AccountController {
     private let transport: any GrindrTransport
     private let credentials: any CredentialStore
     private let location: any LocationProviding
+    private let preferences: (any PreferenceStore)?
 
     /// Creates the controller and resumes the stored account, if any.
     ///
     /// The transport must have been created with `credentials`' stored value.
     public init(
         transport: any GrindrTransport, credentials: any CredentialStore,
-        location: any LocationProviding,
+        location: any LocationProviding, preferences: (any PreferenceStore)? = nil,
         isDemo: Bool = false
     ) {
         self.transport = transport
         self.credentials = credentials
         self.location = location
+        self.preferences = preferences
         self.isDemo = isDemo
         state = .signedOut
 
@@ -68,7 +70,9 @@ public final class AccountController {
         startSession(profileID: result.profileID)
     }
 
+    /// Signs out and forgets the account's session and preferences.
     public func signOut() async {
+        if let session { preferences?.saveBrowseFilters(nil, for: session.profileID) }
         session?.stop()
         state = .signedOut
         credentials.saveCredentials(nil)
@@ -83,7 +87,8 @@ public final class AccountController {
 
     private func startSession(profileID: ProfileID) {
         let session = AccountSession(
-            profileID: profileID, api: GrindrAPI(transport: transport), location: location)
+            profileID: profileID, api: GrindrAPI(transport: transport), location: location,
+            preferences: preferences)
         state = .signedIn(session)
         session.start()
     }

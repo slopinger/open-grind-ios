@@ -18,14 +18,21 @@ public final class BrowseModel {
     @ObservationIgnored weak var session: AccountSession?
     @ObservationIgnored private let api: GrindrAPI
     @ObservationIgnored private let location: any LocationProviding
+    /// Remembers applied filters for the next launch; the explored place is not kept.
+    @ObservationIgnored private let saveFilters: (BrowseFilters) -> Void
     @ObservationIgnored private var nextPage: Int?
     @ObservationIgnored private var geohash: String?
     /// Bumped on every reload, so a page that arrives late for an old query is dropped.
     @ObservationIgnored private var generation = 0
 
-    init(api: GrindrAPI, location: any LocationProviding) {
+    init(
+        api: GrindrAPI, location: any LocationProviding, filters: BrowseFilters = BrowseFilters(),
+        saveFilters: @escaping (BrowseFilters) -> Void = { _ in }
+    ) {
         self.api = api
         self.location = location
+        self.filters = filters
+        self.saveFilters = saveFilters
     }
 
     public var canLoadMore: Bool { nextPage != nil }
@@ -59,6 +66,7 @@ public final class BrowseModel {
     public func apply(_ filters: BrowseFilters) async {
         guard filters != self.filters else { return }
         self.filters = filters
+        saveFilters(filters)
         profiles = []
         nextPage = nil
         await refresh()

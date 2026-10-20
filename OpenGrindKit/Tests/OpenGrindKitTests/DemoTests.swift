@@ -17,6 +17,33 @@ struct DemoTests {
         return try #require(account.session)
     }
 
+    @Test func filtersAreRememberedButNotTheExploredPlace() async throws {
+        let defaults = try #require(UserDefaults(suiteName: "DemoTests.\(UUID().uuidString)"))
+        let preferences = DefaultsPreferenceStore(defaults: defaults)
+        let credentials = InMemoryCredentialStore()
+        func launch() -> AccountController {
+            AccountController(
+                transport: DemoTransport(), credentials: credentials,
+                location: FixedLocation(geohash: DemoTransport.geohash), preferences: preferences, isDemo: true)
+        }
+
+        let first = launch()
+        try await first.signIn(email: "demo", password: "")
+        var filters = BrowseFilters()
+        filters.onlineOnly = true
+        filters.tags = ["hiking"]
+        let session = try #require(first.session)
+        await session.browse.apply(filters)
+        await session.browse.explore(ExplorePlace(latitude: 48.86, longitude: 2.35, name: "Paris"))
+
+        let relaunched = try #require(launch().session, "the stored credentials resume the session")
+        #expect(relaunched.browse.filters == filters)
+        #expect(relaunched.browse.exploring == nil)
+
+        await first.signOut()
+        #expect(preferences.browseFilters(for: session.profileID) == nil, "signing out forgets them")
+    }
+
     @Test func everyTabLoads() async throws {
         let session = try await signedIn()
         await session.browse.loadIfNeeded()

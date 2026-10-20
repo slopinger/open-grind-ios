@@ -20,11 +20,19 @@ public final class AccountSession {
     @ObservationIgnored private var lastLocationUpdate: Date?
     @ObservationIgnored private let location: any LocationProviding
 
-    init(profileID: ProfileID, api: GrindrAPI, location: any LocationProviding) {
+    init(
+        profileID: ProfileID, api: GrindrAPI, location: any LocationProviding,
+        preferences: (any PreferenceStore)? = nil
+    ) {
         self.profileID = profileID
         self.api = api
         self.location = location
-        browse = BrowseModel(api: api, location: location)
+        browse = BrowseModel(
+            api: api, location: location,
+            filters: preferences?.browseFilters(for: profileID) ?? BrowseFilters()
+        ) { filters in
+            preferences?.saveBrowseFilters(filters, for: profileID)
+        }
         inbox = InboxModel(api: api, me: profileID)
         interest = InterestModel(api: api, me: profileID)
         me = MeModel(api: api, profileID: profileID)
