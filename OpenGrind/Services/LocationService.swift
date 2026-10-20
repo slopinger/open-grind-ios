@@ -62,14 +62,15 @@ final class LocationService: NSObject, LocationProviding, CLLocationManagerDeleg
 
     // MARK: CLLocationManagerDelegate (called on the main thread)
 
-    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+    nonisolated func locationManagerDidChangeAuthorization(_: CLLocationManager) {
         MainActor.assumeIsolated {
-            authorization = manager.authorizationStatus
-            switch manager.authorizationStatus {
+            // The stored manager is the only one this delegate serves.
+            authorization = self.manager.authorizationStatus
+            switch self.manager.authorizationStatus {
             case .denied: finish(.failure(.denied))
             case .restricted: finish(.failure(.restricted))
             case .authorizedWhenInUse, .authorizedAlways:
-                if !waiters.isEmpty { manager.requestLocation() }
+                if !waiters.isEmpty { self.manager.requestLocation() }
             default: break
             }
         }
