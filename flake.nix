@@ -1,10 +1,21 @@
 {
   description = "Open Grind for iOS: native SwiftUI port of the Open Grind Grindr client";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # Rust with the iOS standard libraries, for the Xcode shell on macOS.
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
 
   outputs =
-    { self, nixpkgs }:
+    {
+      self,
+      nixpkgs,
+      rust-overlay,
+    }:
     let
       systems = [
         "x86_64-linux"
@@ -82,7 +93,36 @@
         );
 
       devShells = forAllSystems (pkgs: {
-        default = pkgs.mkShell.override { inherit (pkgs.swiftPackages) stdenv; } {
+        default =
+          if pkgs.stdenv.hostPlatform.isDarwin then
+            self.devShells.${pkgs.stdenv.hostPlatform.system}.xcode
+          else
+            self.devShells.${pkgs.stdenv.hostPlatform.system}.linux;
+
+        # macOS: everything scripts/build-core-xcframework.sh needs besides Xcode.
+        # Builds use Xcode's compilers and SDKs, so Nix's own SDK settings are cleared.
+        xcode = pkgs.mkShellNoCC {
+          packages = [
+            ((pkgs.extend rust-overlay.overlays.default).rust-bin.stable.latest.minimal.override {
+              targets = [
+                "aarch64-apple-ios"
+                "aarch64-apple-ios-sim"
+                "aarch64-apple-darwin"
+              ];
+            })
+            pkgs.cmake
+            pkgs.perl
+          ];
+          shellHook = ''
+            unset DEVELOPER_DIR SDKROOT MACOSX_DEPLOYMENT_TARGET NIX_CFLAGS_COMPILE NIX_LDFLAGS
+            if ! /usr/bin/xcode-select -p >/dev/null 2>&1; then
+              echo "Install Xcode 26 and run xcode-select first." >&2
+            fi
+          '';
+        };
+
+        # Linux: Swift and Rust toolchains for the package, the bridge and the checks.
+        linux = pkgs.mkShell.override { inherit (pkgs.swiftPackages) stdenv; } {
           packages = [
             pkgs.swiftPackages.swift
             pkgs.swiftPackages.swiftpm

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Builds the Rust bridge (core/) for iPhone, the iOS Simulator and macOS, and packs
 # it as OpenGrindKit/Frameworks/opengrind_coreFFI.xcframework, which Package.swift
-# uses on Apple platforms. Needs Xcode and rustup with the three targets:
-#   rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin
+# uses on Apple platforms. Needs Xcode, plus Rust with the three targets, cmake and perl:
+# run it in the flake's shell (`nix develop -c scripts/build-core-xcframework.sh`), or
+# install them yourself (`rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin`).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

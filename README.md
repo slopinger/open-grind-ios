@@ -43,13 +43,17 @@ a Rust client that emulates the Android app. This port reuses it:
 
 ## Building
 
-You need Xcode 26 and Rust (`rustup`).
+You need Xcode 26 and [Nix](https://nixos.org/download/). The flake's shell provides Rust with the
+iOS targets, cmake and perl, so nothing else has to be installed; Xcode only sees the finished
+framework:
 
 ```sh
-rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin
-scripts/build-core-xcframework.sh   # builds OpenGrindKit/Frameworks/opengrind_coreFFI.xcframework
+nix develop -c scripts/build-core-xcframework.sh   # builds OpenGrindKit/Frameworks/opengrind_coreFFI.xcframework
 open OpenGrind.xcodeproj
 ```
+
+Without Nix, install Rust with `rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+aarch64-apple-darwin` and cmake, then run the script directly. Run it again after changing `core/`.
 
 Pick your team under Signing & Capabilities to run it on a device. Start with **Try the Demo** to
 explore without an account, or pass `-demoMode YES` as a launch argument.

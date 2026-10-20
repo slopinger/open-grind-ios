@@ -23,7 +23,10 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
 - `OpenGrindTests/` (Swift Testing, hosted), `OpenGrindUITests/` (XCTest demo tour with screenshots).
 
 ## Commands
-- `nix develop`: swift 6.3, swift-format, cargo/rustc, cmake, clang (`LIBCLANG_PATH` for boring-sys2).
+- `nix develop`: on Linux (shell `linux`) swift 6.3, swift-format, cargo/rustc, cmake, clang
+  (`LIBCLANG_PATH` for boring-sys2). On macOS (shell `xcode`) rust-overlay Rust with the iOS targets,
+  cmake and perl, using the system Xcode's compilers/SDKs (it unsets DEVELOPER_DIR/SDKROOT):
+  `nix develop -c scripts/build-core-xcframework.sh`, then open the project in Xcode. CI uses it too.
 - `cd OpenGrindKit && swift test`: kit tests on Linux (no Rust bridge).
 - `nix build` / `nix flake check`: core (cargo tests), opengrindkit (Swift tests incl. bridge smoke
   test), `bindings` (committed bindings == generated), `app` (`swiftc -parse` + `swift-format lint --strict`).
