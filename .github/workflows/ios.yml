@@ -26,8 +26,11 @@ jobs:
           rustup toolchain install stable --profile minimal
           rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin
 
-      - name: Cache Rust builds
-        uses: actions/cache@v4
+      # Restore and save separately, so the slow BoringSSL build is kept even
+      # when a later step fails.
+      - name: Restore Rust builds
+        id: rust-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
@@ -38,6 +41,16 @@ jobs:
 
       - name: Build the Rust bridge
         run: scripts/build-core-xcframework.sh
+
+      - name: Save Rust builds
+        if: steps.rust-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            core/target
+          key: ${{ steps.rust-cache.outputs.cache-primary-key }}
 
       - name: Test OpenGrindKit on macOS
         run: swift test --package-path OpenGrindKit
