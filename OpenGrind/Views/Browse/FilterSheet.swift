@@ -27,14 +27,14 @@ struct FilterSheet: View {
 
                 Section("Age") {
                     RangePicker(
-                        "age", range: $filters.ages, bounds: BrowseFilters.ageBounds,
+                        id: "age", range: $filters.ages, bounds: BrowseFilters.ageBounds,
                         values: Array(BrowseFilters.ageBounds), openWheel: $openWheel
                     ) { Text($0, format: .number) }
                 }
 
                 Section("Height") {
                     RangePicker(
-                        "height", range: heightRange,
+                        id: "height", range: heightRange,
                         bounds: Int(
                             BrowseFilters.heightBounds.lowerBound)...Int(BrowseFilters.heightBounds.upperBound),
                         values: Array(stride(from: 121, through: 241, by: 2)), openWheel: $openWheel
@@ -43,7 +43,7 @@ struct FilterSheet: View {
 
                 Section("Weight") {
                     RangePicker(
-                        "weight", range: weightRange,
+                        id: "weight", range: weightRange,
                         bounds: Int(
                             BrowseFilters.weightBounds.lowerBound / 1000)...Int(
                                 BrowseFilters.weightBounds.upperBound / 1000),
@@ -123,18 +123,6 @@ private struct RangePicker: View {
     let values: [Int]
     @Binding var openWheel: String?
     let label: (Int) -> Text
-
-    init(
-        _ id: String, range: Binding<ClosedRange<Int>>, bounds: ClosedRange<Int>, values: [Int],
-        openWheel: Binding<String?>, label: @escaping (Int) -> Text
-    ) {
-        self.id = id
-        _range = range
-        self.bounds = bounds
-        self.values = values
-        _openWheel = openWheel
-        self.label = label
-    }
 
     var body: some View {
         WheelPickerRow(

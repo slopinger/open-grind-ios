@@ -151,8 +151,8 @@ struct EditProfileView: View {
                 selection: weightBinding, isExpanded: $openWheel.isOpen("weight")
             ) {
                 Text("Not Specified").tag(Int?.none)
-                ForEach(WeightOption.all, id: \.grams) { option in
-                    Text(Formatting.weight(Double(option.grams))).tag(Int?.some(option.grams))
+                ForEach(WeightOptions.grams, id: \.self) { grams in
+                    Text(Formatting.weight(Double(grams))).tag(Int?.some(grams))
                 }
             }
             AttributePicker(title: "Body Type", selection: $edit.bodyType)
@@ -234,7 +234,7 @@ struct EditProfileView: View {
     /// Weight as the nearest option in the user's units.
     private var weightBinding: Binding<Int?> {
         Binding {
-            edit.weight.map { WeightOption.nearest(to: $0).grams }
+            edit.weight.map(WeightOptions.nearest(to:))
         } set: { grams in
             edit.weight = grams.map(Double.init)
         }
@@ -254,27 +254,22 @@ struct EditProfileView: View {
     }
 }
 
-/// The weights offered in the picker: whole kilograms or whole pounds.
-private enum WeightOption {
-    struct Option {
-        var grams: Int
-    }
-
-    static var all: [Option] {
+/// The weights offered in the picker, in grams: whole kilograms or whole pounds.
+private enum WeightOptions {
+    static let grams: [Int] = {
         let bounds = BrowseFilters.weightBounds
         if Locale.current.measurementSystem == .metric {
             let kilograms = Int((bounds.lowerBound / 1000).rounded(.up))...Int(bounds.upperBound / 1000)
-            return kilograms.map { Option(grams: $0 * 1000) }
+            return kilograms.map { $0 * 1000 }
         }
         let gramsPerPound = 453.59237
         let pounds =
             Int((bounds.lowerBound / gramsPerPound).rounded(.up))...Int(bounds.upperBound / gramsPerPound)
-        return pounds.map { Option(grams: Int((Double($0) * gramsPerPound).rounded())) }
-    }
+        return pounds.map { Int((Double($0) * gramsPerPound).rounded()) }
+    }()
 
-    static func nearest(to grams: Double) -> Option {
-        all.min { abs(Double($0.grams) - grams) < abs(Double($1.grams) - grams) }
-            ?? Option(grams: Int(grams))
+    static func nearest(to weight: Double) -> Int {
+        grams.min { abs(Double($0) - weight) < abs(Double($1) - weight) } ?? Int(weight)
     }
 }
 
