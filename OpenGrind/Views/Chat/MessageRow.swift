@@ -100,6 +100,21 @@ struct MessageRow: View {
         if case .text(let text) = message.content {
             Button("Copy", systemImage: "doc.on.doc") { UIPasteboard.general.string = text }
         }
+        sentMessageActions
+    }
+
+    @ViewBuilder
+    private var accessibilityActions: some View {
+        if item.delivery == .failed {
+            Button("Try Again") { Task { await chat.retry(item) } }
+            Button("Delete") { chat.discard(item) }
+        }
+        sentMessageActions
+    }
+
+    /// In the context menu and as accessibility actions.
+    @ViewBuilder
+    private var sentMessageActions: some View {
         if item.delivery == .sent, message.content != .unsent {
             if !isOutgoing, !chat.hasHeart(item) {
                 Button("Heart", systemImage: "heart") { Task { await chat.heart(item) } }
@@ -110,23 +125,6 @@ struct MessageRow: View {
             Button("Delete for Me", systemImage: "trash", role: .destructive) {
                 Task { await chat.deleteForMe(item) }
             }
-        }
-    }
-
-    @ViewBuilder
-    private var accessibilityActions: some View {
-        if item.delivery == .failed {
-            Button("Try Again") { Task { await chat.retry(item) } }
-            Button("Delete") { chat.discard(item) }
-        }
-        if item.delivery == .sent, message.content != .unsent {
-            if !isOutgoing, !chat.hasHeart(item) {
-                Button("Heart") { Task { await chat.heart(item) } }
-            }
-            if isOutgoing {
-                Button("Unsend") { isConfirmingUnsend = true }
-            }
-            Button("Delete for Me") { Task { await chat.deleteForMe(item) } }
         }
     }
 
@@ -155,12 +153,8 @@ private struct MessageBubble: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        if let data = item.localPhoto, let image = UIImage(data: data) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 220, height: 220 * min(image.size.height / max(image.size.width, 1), 1.5))
-                .clipShape(.rect(cornerRadius: 18, style: .continuous))
+        if let data = item.localPhoto {
+            LocalPhoto(data: data)
         } else {
             content
         }
@@ -174,9 +168,9 @@ private struct MessageBubble: View {
         case .unsent:
             textBubble(Text("Message unsent").italic(), isMuted: true)
         case .image(let url, let width, let height):
-            photo(url: url, aspectRatio: Self.ratio(width, height))
+            photo(url: url, width: width, height: height)
         case .giphy(let url, let width, let height):
-            photo(url: url, aspectRatio: Self.ratio(width, height), opensViewer: false)
+            photo(url: url, width: width, height: height, opensViewer: false)
         case .gaymoji(let hash):
             RemoteImage(url: MediaURL.gaymoji(hash), pointSize: 120, contentMode: .fit)
                 .frame(width: 120, height: 120)
@@ -238,12 +232,12 @@ private struct MessageBubble: View {
         isOutgoing ? .brand : Color(.secondarySystemFill)
     }
 
-    private func photo(url: URL, aspectRatio: CGFloat, opensViewer: Bool = true) -> some View {
+    private func photo(url: URL, width: Int?, height: Int?, opensViewer: Bool = true) -> some View {
         Button {
             if opensViewer { openImage(url) }
         } label: {
-            RemoteImage(url: url, pointSize: 440)
-                .frame(width: 220, height: 220 / aspectRatio)
+            RemoteImage(url: url, pointSize: Self.pointSize(width, height))
+                .frame(width: 220, height: 220 / Self.ratio(width, height))
                 .clipShape(.rect(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -255,6 +249,12 @@ private struct MessageBubble: View {
         guard let width, let height, width > 0, height > 0 else { return 1 }
         // Very tall images are cropped rather than filling the screen.
         return max(CGFloat(width) / CGFloat(height), 2 / 3)
+    }
+
+    /// The longest side of a photo filling the 220-point-wide bubble, cropped parts included.
+    private static func pointSize(_ width: Int?, _ height: Int?) -> CGFloat {
+        guard let width, let height, width > 0, height > 0 else { return 440 }
+        return 220 * max(1, CGFloat(height) / CGFloat(width))
     }
 
     private func locationBubble(latitude: Double, longitude: Double) -> some View {
@@ -300,5 +300,30 @@ private struct MessageBubble: View {
         .padding(.horizontal, 13)
         .padding(.vertical, 9)
         .background(bubbleColor, in: .rect(cornerRadius: 18, style: .continuous))
+    }
+}
+
+/// A photo you are sending, from its local copy.
+private struct LocalPhoto: View {
+    /// Kept across updates: a new `UIImage` each time would be decoded from the JPEG again.
+    @State private var image: UIImage?
+
+    init(data: Data) {
+        _image = State(initialValue: UIImage(data: data))
+    }
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 220, height: 220 * min(image.size.height / max(image.size.width, 1), 1.5))
+            } else {
+                ImagePlaceholder()
+                    .frame(width: 220, height: 220)
+            }
+        }
+        .clipShape(.rect(cornerRadius: 18, style: .continuous))
     }
 }
