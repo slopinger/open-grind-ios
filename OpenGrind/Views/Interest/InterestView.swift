@@ -10,12 +10,11 @@ struct InterestView: View {
 
     @Environment(AccountSession.self) private var session
     @SceneStorage("interestSection") private var section = Section.taps
-    @State private var path: [Route] = []
 
     private var interest: InterestModel { session.interest }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack {
             Group {
                 switch section {
                 case .taps: taps

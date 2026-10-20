@@ -5,14 +5,13 @@ import SwiftUI
 struct MeView: View {
     @Environment(AccountSession.self) private var session
     @Environment(AppModel.self) private var app
-    @State private var path: [Route] = []
     @State private var isEditing = false
     @State private var isConfirmingSignOut = false
 
     private var me: MeModel { session.me }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack {
             List {
                 if app.isDemo {
                     Section {
