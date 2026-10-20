@@ -44,16 +44,21 @@ public struct GrindrAPI: Sendable {
         return profile
     }
 
-    /// Short profiles for `ids`, in batches the server accepts.
+    /// Short profiles for `ids`, fetched at once in batches the server accepts, in the order of `ids`.
     public func profiles(_ ids: [ProfileID]) async throws -> [ProfileSummary] {
-        var summaries: [ProfileSummary] = []
-        for start in stride(from: 0, to: ids.count, by: 30) {
-            let batch = Array(ids[start..<min(start + 30, ids.count)])
-            let request = try APIRequest.json(
-                .post, "/v3/profiles", .object(["targetProfileIds": .ints(batch)]))
-            summaries += try await decode(LossyProfiles<ProfileSummary>.self, request).profiles
+        let batches = stride(from: 0, to: ids.count, by: 30).map { Array(ids[$0..<min($0 + 30, ids.count)]) }
+        return try await withThrowingTaskGroup(of: (Int, [ProfileSummary]).self) { group in
+            for (index, batch) in batches.enumerated() {
+                group.addTask {
+                    let request = try APIRequest.json(
+                        .post, "/v3/profiles", .object(["targetProfileIds": .ints(batch)]))
+                    return (index, try await decode(LossyProfiles<ProfileSummary>.self, request).profiles)
+                }
+            }
+            var results = [[ProfileSummary]](repeating: [], count: batches.count)
+            for try await (index, summaries) in group { results[index] = summaries }
+            return results.flatMap { $0 }
         }
-        return summaries
     }
 
     /// Saves the changed fields of your profile.
