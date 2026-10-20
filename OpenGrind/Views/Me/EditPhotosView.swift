@@ -5,6 +5,7 @@ import SwiftUI
 /// Your profile photos: add, reorder and delete them. Changes are saved right away.
 struct EditPhotosView: View {
     @Environment(AccountSession.self) private var session
+    @State private var isPickingPhotos = false
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var pendingDelete: ProfilePhoto?
     @State private var encodingFailure: Failure?
@@ -41,6 +42,12 @@ struct EditPhotosView: View {
         .navigationTitle("Photos")
         .navigationBarTitleDisplayMode(.inline)
         .animation(.default, value: photos)
+        // The modifier rather than a PhotosPicker view: PhotosPicker's label closure is
+        // @Sendable and nonisolated, so it can't build this screen's main-actor views.
+        .photosPicker(
+            isPresented: $isPickingPhotos, selection: $pickerItems, maxSelectionCount: max(remainingSlots, 1),
+            matching: .images, preferredItemEncoding: .compatible
+        )
         .onChange(of: pickerItems) { _, items in
             guard !items.isEmpty else { return }
             pickerItems = []
@@ -103,10 +110,9 @@ struct EditPhotosView: View {
     }
 
     private var addButton: some View {
-        PhotosPicker(
-            selection: $pickerItems, maxSelectionCount: remainingSlots, matching: .images,
-            preferredItemEncoding: .compatible
-        ) {
+        Button {
+            isPickingPhotos = true
+        } label: {
             PhotoSlot {
                 Image(systemName: "plus")
                     .font(.title2.weight(.semibold))
@@ -117,6 +123,7 @@ struct EditPhotosView: View {
                     .strokeBorder(.tint, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
             }
         }
+        .buttonStyle(.plain)
         .accessibilityLabel("Add Photos")
     }
 
@@ -161,8 +168,7 @@ struct EditPhotosView: View {
 private struct PhotoSlot<Content: View>: View {
     let content: Content
 
-    /// Nonisolated, so labels that aren't on the main actor (such as PhotosPicker's) can use it.
-    nonisolated init(@ViewBuilder content: () -> Content) {
+    init(@ViewBuilder content: () -> Content) {
         self.content = content()
     }
 
