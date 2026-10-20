@@ -53,6 +53,10 @@ final class DemoTourTests: XCTestCase {
         sleep(4)  // The demo replies after a short pause.
         snapshot(app, "07-chat")
 
+        // Back to the grid: the chat and the profile hide the tab bar.
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.tabBars.buttons["Messages"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Messages"].tap()
         sleep(2)
         snapshot(app, "08-messages")
