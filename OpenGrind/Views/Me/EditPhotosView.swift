@@ -22,7 +22,7 @@ struct EditPhotosView: View {
                         tile(photo)
                     }
                     if me.isUploadingPhoto {
-                        slot {
+                        PhotoSlot {
                             ProgressView()
                                 .accessibilityLabel("Uploading photo")
                         }
@@ -72,7 +72,7 @@ struct EditPhotosView: View {
             Divider()
             Button("Delete", systemImage: "trash", role: .destructive) { pendingDelete = photo }
         } label: {
-            slot {
+            PhotoSlot {
                 RemoteImage(url: MediaURL.profileImage(photo.mediaHash, size: .thumbnail), pointSize: 130)
             }
             .overlay(alignment: .topLeading) {
@@ -107,7 +107,7 @@ struct EditPhotosView: View {
             selection: $pickerItems, maxSelectionCount: remainingSlots, matching: .images,
             preferredItemEncoding: .compatible
         ) {
-            slot {
+            PhotoSlot {
                 Image(systemName: "plus")
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(.tint)
@@ -118,14 +118,6 @@ struct EditPhotosView: View {
             }
         }
         .accessibilityLabel("Add Photos")
-    }
-
-    private func slot(@ViewBuilder content: () -> some View) -> some View {
-        Color(.secondarySystemFill)
-            .aspectRatio(1, contentMode: .fit)
-            .overlay { content() }
-            .clipShape(.rect(cornerRadius: 12, style: .continuous))
-            .contentShape(.rect(cornerRadius: 12, style: .continuous))
     }
 
     private func accessibilityLabel(_ photo: ProfilePhoto, index: Int) -> Text {
@@ -162,5 +154,23 @@ struct EditPhotosView: View {
 
     private var isConfirmingDelete: Binding<Bool> {
         Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } })
+    }
+}
+
+/// A square tile in the photo grid.
+private struct PhotoSlot<Content: View>: View {
+    let content: Content
+
+    /// Nonisolated, so labels that aren't on the main actor (such as PhotosPicker's) can use it.
+    nonisolated init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        Color(.secondarySystemFill)
+            .aspectRatio(1, contentMode: .fit)
+            .overlay { content }
+            .clipShape(.rect(cornerRadius: 12, style: .continuous))
+            .contentShape(.rect(cornerRadius: 12, style: .continuous))
     }
 }
