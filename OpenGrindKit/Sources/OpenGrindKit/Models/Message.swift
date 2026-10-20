@@ -254,7 +254,7 @@ public struct MessagePage: Sendable, Hashable, Decodable {
 /// A message to send.
 public enum OutgoingMessage: Hashable, Sendable {
     case text(String)
-    /// A photo uploaded with ``GrindrAPI/uploadChatPhoto(_:contentType:)``.
+    /// A photo uploaded with ``GrindrAPI/uploadChatPhoto(_:)``.
     case image(mediaID: Int)
     case location(latitude: Double, longitude: Double)
 

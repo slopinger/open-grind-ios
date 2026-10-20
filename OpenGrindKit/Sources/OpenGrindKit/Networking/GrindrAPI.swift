@@ -199,12 +199,10 @@ public struct GrindrAPI: Sendable {
     }
 
     /// Uploads a photo to send with ``OutgoingMessage/image(mediaID:)``.
-    public func uploadChatPhoto(_ data: Data, contentType: String = "image/jpeg") async throws
-        -> UploadedMedia
-    {
+    public func uploadChatPhoto(_ jpeg: Data) async throws -> UploadedMedia {
         let request = APIRequest(
             .post, "/v5/chat/media/upload?takenOnGrindr=false",
-            body: .bytes(contentType: contentType, data))
+            body: .bytes(contentType: "image/jpeg", jpeg))
         return try await decode(UploadedMedia.self, request)
     }
 

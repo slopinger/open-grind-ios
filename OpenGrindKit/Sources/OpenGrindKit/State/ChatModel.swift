@@ -43,8 +43,8 @@ public final class ChatModel: Identifiable {
     public nonisolated let me: ProfileID
     /// Where the next older page starts; `nil` at the start of the conversation.
     private var olderPageKey: String?
-    @ObservationIgnored private var outgoing: [String: OutgoingMessage] = [:]
-    @ObservationIgnored private var photos: [String: (data: Data, contentType: String)] = [:]
+    /// What each message still sending or failed will send, by its local ID.
+    @ObservationIgnored private var unsent: [String: Unsent] = [:]
     @ObservationIgnored private var typingReset: Task<Void, Never>?
     @ObservationIgnored private var isVisible = false
     @ObservationIgnored private var lastMarkedRead: String?
@@ -139,7 +139,7 @@ public final class ChatModel: Identifiable {
 
     public func send(_ message: OutgoingMessage) async {
         let localID = "local-\(UUID().uuidString)"
-        outgoing[localID] = message
+        unsent[localID] = .message(message)
         items.append(
             Item(
                 message: placeholder(localID, content: Self.optimisticContent(message)), delivery: .sending)
@@ -147,13 +147,13 @@ public final class ChatModel: Identifiable {
         await deliver(localID)
     }
 
-    /// Uploads a JPEG or PNG and sends it.
-    public func sendPhoto(_ data: Data, contentType: String = "image/jpeg") async {
+    /// Uploads a JPEG and sends it.
+    public func sendPhoto(_ jpeg: Data) async {
         let localID = "local-\(UUID().uuidString)"
-        photos[localID] = (data, contentType)
+        unsent[localID] = .photo(jpeg)
         var item = Item(
             message: placeholder(localID, content: .unsupported(.image)), delivery: .sending)
-        item.localPhoto = data
+        item.localPhoto = jpeg
         items.append(item)
         await deliver(localID)
     }
@@ -170,25 +170,24 @@ public final class ChatModel: Identifiable {
     public func discard(_ item: Item) {
         guard item.delivery == .failed else { return }
         items.removeAll { $0.id == item.id }
-        outgoing[item.id] = nil
-        photos[item.id] = nil
+        unsent[item.id] = nil
     }
 
     private func deliver(_ localID: String) async {
         do {
             let message: OutgoingMessage
-            if let photo = photos[localID] {
-                let uploaded = try await api.uploadChatPhoto(photo.data, contentType: photo.contentType)
-                message = .image(mediaID: uploaded.mediaID)
-                outgoing[localID] = message
-                photos[localID] = nil
-            } else if let pending = outgoing[localID] {
+            switch unsent[localID] {
+            case .message(let pending):
                 message = pending
-            } else {
+            case .photo(let jpeg):
+                message = .image(mediaID: try await api.uploadChatPhoto(jpeg).mediaID)
+                // A retry after a failed send doesn't upload the photo again.
+                unsent[localID] = .message(message)
+            case nil:
                 return
             }
             let sent = try await api.send(message, to: otherProfileID)
-            outgoing[localID] = nil
+            unsent[localID] = nil
             items.removeAll { $0.id == localID }
             // The websocket may have delivered the echo first.
             if !items.contains(where: { $0.id == sent.id }) {
@@ -201,6 +200,12 @@ public final class ChatModel: Identifiable {
             }
             actionFailure = Failure(error)
         }
+    }
+
+    private enum Unsent {
+        case message(OutgoingMessage)
+        /// Not uploaded yet.
+        case photo(Data)
     }
 
     private func placeholder(_ id: String, content: Message.Content) -> Message {

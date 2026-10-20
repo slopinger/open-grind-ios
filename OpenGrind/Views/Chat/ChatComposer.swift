@@ -66,7 +66,7 @@ struct ChatComposer: View {
                 return
             }
             sentCount += 1
-            await chat.sendPhoto(photo.data, contentType: "image/jpeg")
+            await chat.sendPhoto(photo.data)
         } catch {
             photoFailure = Failure(error)
         }
