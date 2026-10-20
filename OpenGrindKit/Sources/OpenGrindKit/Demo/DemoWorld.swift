@@ -111,7 +111,7 @@ actor DemoWorld {
             }
             if !filters.tribes.isEmpty, filters.tribes.isDisjoint(with: profile.tribes) { return false }
             if !filters.tags.isEmpty {
-                let texts = Set(filters.tags.compactMap(Self.tagCatalog.text(forKey:)))
+                let texts = Set(filters.tags.compactMap { Self.tagCatalog.tag(forKey: $0)?.text })
                 if texts.isDisjoint(with: profile.tags) { return false }
             }
             return true
@@ -194,7 +194,7 @@ actor DemoWorld {
         if let value = Self.ints(patch["genders"]) { profile.genderIDs = value }
         if let value = Self.ints(patch["pronouns"]) { profile.pronounIDs = value }
         if let keys = patch["profileTags"] as? [String] {
-            profile.tags = keys.map { Self.tagCatalog.text(forKey: $0) ?? $0 }
+            profile.tags = keys.map { Self.tagCatalog.tag(forKey: $0)?.text ?? $0 }
         }
         if has("lastTestedDate") {
             profile.lastTested = Self.double(patch["lastTestedDate"]).map {

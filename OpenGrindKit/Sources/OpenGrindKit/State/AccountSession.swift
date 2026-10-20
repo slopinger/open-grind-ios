@@ -14,6 +14,7 @@ public final class AccountSession {
     public let inbox: InboxModel
     public let interest: InterestModel
     public let me: MeModel
+    public let catalogs: CatalogModel
 
     @ObservationIgnored private var listeners: [UUID: (RealtimeEvent) -> Void] = [:]
     @ObservationIgnored private var chats: [String: ChatModel] = [:]
@@ -35,7 +36,8 @@ public final class AccountSession {
         }
         inbox = InboxModel(api: api, me: profileID)
         interest = InterestModel(api: api, me: profileID)
-        me = MeModel(api: api, profileID: profileID)
+        catalogs = CatalogModel(api: api)
+        me = MeModel(api: api, profileID: profileID, catalogs: catalogs)
         browse.session = self
         inbox.session = self
     }

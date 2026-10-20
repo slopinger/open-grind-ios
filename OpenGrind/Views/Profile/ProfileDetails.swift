@@ -4,7 +4,7 @@ import SwiftUI
 /// Name, presence and every detail a profile shares, in sections.
 struct ProfileDetails: View {
     let profile: Profile
-    let me: MeModel
+    let catalogs: CatalogModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -13,9 +13,9 @@ struct ProfileDetails: View {
                 Text(about)
                     .textSelection(.enabled)
             }
-            if !profile.tags.isEmpty {
+            if !tags.isEmpty {
                 FlowLayout(spacing: 6) {
-                    ForEach(profile.tags, id: \.self) { tag in
+                    ForEach(tags, id: \.self) { tag in
                         Text(tag)
                             .font(.subheadline)
                             .padding(.horizontal, 10)
@@ -24,7 +24,7 @@ struct ProfileDetails: View {
                     }
                 }
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Tags: \(profile.tags.formatted(.list(type: .and)))")
+                .accessibilityLabel("Tags: \(tags.formatted(.list(type: .and)))")
             }
             DetailSection("Stats", rows: stats)
             DetailSection("Identity", rows: identity)
@@ -97,9 +97,14 @@ struct ProfileDetails: View {
         ]
     }
 
+    /// Profiles carry tag texts or keys; keys are shown by their text.
+    private var tags: [String] {
+        profile.tags.map { catalogs.tags?.tag(forKey: $0)?.text ?? $0 }
+    }
+
     private var identity: [DetailRow] {
-        let genders = profile.genderIDs.compactMap { me.gender($0)?.name }
-        let pronouns = profile.pronounIDs.compactMap { me.pronoun($0)?.name }
+        let genders = profile.genderIDs.compactMap { catalogs.gender($0)?.name }
+        let pronouns = profile.pronounIDs.compactMap { catalogs.pronoun($0)?.name }
         return [
             DetailRow("Gender", genders.isEmpty ? nil : genders.formatted(.list(type: .and))),
             DetailRow("Pronouns", pronouns.isEmpty ? nil : pronouns.joined(separator: ", ")),

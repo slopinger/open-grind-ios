@@ -59,6 +59,7 @@ struct DecodingTests {
             """#.utf8)
         let genders = try JSONDecoder().decode([Gender].self, from: json)
         #expect(Gender.profileOptions(genders).map(\.id) == [1, 2, 8, 9])
+        #expect(Gender.profileOptions(genders, keeping: [12]).map(\.id) == [1, 2, 8, 9, 12], "a gender you have stays")
         #expect(genders.first { $0.id == 1 }?.excludedOnProfile == [2])
     }
 
@@ -76,7 +77,7 @@ struct DecodingTests {
             """)
         #expect(catalog.categories.map(\.name) == ["Hobbys"])
         #expect(catalog.categories.first?.tags.map(\.key) == ["hiking", "coffee"])
-        #expect(catalog.text(forKey: "coffee") == "Kaffee")
+        #expect(catalog.tag(forKey: "coffee")?.text == "Kaffee")
         #expect(catalog.tags(matching: "wand").map(\.key) == ["hiking"])
     }
 

@@ -71,7 +71,7 @@ struct MeView: View {
             .routeDestinations()
             .sheet(isPresented: $isEditing) {
                 if let profile = me.profile {
-                    EditProfileView(profile: profile, me: me, tagCatalog: session.browse.tagCatalog)
+                    EditProfileView(profile: profile, me: me)
                 }
             }
             .confirmationDialog(

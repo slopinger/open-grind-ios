@@ -31,37 +31,36 @@ public struct ProfileTagCategory: Identifiable, Hashable, Sendable {
 
 /// Every tag Grindr offers (`GET /v1/tags`), grouped by category.
 public struct ProfileTagCatalog: Hashable, Sendable {
-    public var categories: [ProfileTagCategory]
+    public let categories: [ProfileTagCategory]
+    /// Every tag once, in catalog order.
+    public let tags: [ProfileTag]
+    private let tagsByKey: [String: ProfileTag]
+    private let keysByText: [String: String]
 
     public init(categories: [ProfileTagCategory]) {
         self.categories = categories
+        var seen = Set<String>()
+        tags = categories.flatMap(\.tags).filter { seen.insert($0.key).inserted }
+        tagsByKey = Dictionary(tags.map { ($0.key, $0) }, uniquingKeysWith: { first, _ in first })
+        keysByText = Dictionary(tags.map { ($0.text, $0.key) }, uniquingKeysWith: { first, _ in first })
     }
 
-    /// The text of the tag with `key`, if the catalog has it.
-    public func text(forKey key: String) -> String? {
-        for category in categories {
-            if let tag = category.tags.first(where: { $0.key == key }) { return tag.text }
-        }
-        return nil
+    public static func == (lhs: Self, rhs: Self) -> Bool { lhs.categories == rhs.categories }
+
+    public func hash(into hasher: inout Hasher) { hasher.combine(categories) }
+
+    public func tag(forKey key: String) -> ProfileTag? { tagsByKey[key] }
+
+    /// The key for a tag as a profile carries it: profiles carry either the key or
+    /// the text. Values the catalog doesn't know stay as they are.
+    public func key(for value: String) -> String {
+        tagsByKey[value] != nil ? value : keysByText[value] ?? value
     }
 
-    /// The tag with `key`, if the catalog has it.
-    public func tag(forKey key: String) -> ProfileTag? {
-        categories.lazy.flatMap(\.tags).first { $0.key == key }
-    }
-
-    /// The tag a profile's tag value stands for: profiles carry either the key or the text.
-    public func tag(matching value: String) -> ProfileTag? {
-        tag(forKey: value) ?? categories.lazy.flatMap(\.tags).first { $0.text == value }
-    }
-
-    /// Tags whose text contains `query`, each once, in catalog order.
+    /// Tags whose text contains `query`, in catalog order.
     public func tags(matching query: String) -> [ProfileTag] {
         let query = query.trimmingCharacters(in: .whitespaces)
-        var seen = Set<String>()
-        return categories.flatMap(\.tags).filter { tag in
-            (query.isEmpty || tag.text.localizedStandardContains(query)) && seen.insert(tag.key).inserted
-        }
+        return query.isEmpty ? tags : tags.filter { $0.text.localizedStandardContains(query) }
     }
 }
 
@@ -84,11 +83,13 @@ extension ProfileTagCatalog: Decodable {
 
     public init(from decoder: any Decoder) throws {
         let languages = try LossyArray<Language>(from: decoder).elements
-        categories = (languages.first?.categoryCollection.elements ?? []).compactMap { category in
+        let categories: [ProfileTagCategory] = (languages.first?.categoryCollection.elements ?? []).compactMap {
+            category in
             let tags = category.tags.elements.filter { !$0.key.isEmpty && !$0.text.isEmpty }
             guard !tags.isEmpty else { return nil }
             return ProfileTagCategory(
                 name: category.text, tags: tags.map { ProfileTag(key: $0.key, text: $0.text) })
         }
+        self.init(categories: categories)
     }
 }

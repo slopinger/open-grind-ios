@@ -95,8 +95,6 @@ public final class MeModel {
     public private(set) var state: LoadState = .idle
     public private(set) var blocked: [BlockedEntry] = []
     public private(set) var blockedState: LoadState = .idle
-    public private(set) var genders: [Gender] = []
-    public private(set) var pronouns: [Pronoun] = []
     public private(set) var isUploadingPhoto = false
     public var actionFailure: Failure?
 
@@ -108,11 +106,13 @@ public final class MeModel {
     }
 
     @ObservationIgnored private let api: GrindrAPI
+    @ObservationIgnored private let catalogs: CatalogModel
     public nonisolated let profileID: ProfileID
 
-    init(api: GrindrAPI, profileID: ProfileID) {
+    init(api: GrindrAPI, profileID: ProfileID, catalogs: CatalogModel) {
         self.api = api
         self.profileID = profileID
+        self.catalogs = catalogs
     }
 
     public func loadIfNeeded() async {
@@ -120,24 +120,28 @@ public final class MeModel {
         await refresh()
     }
 
+    /// Loads your profile, and the catalogs that name its details alongside it.
     public func refresh() async {
         if profile == nil { state = .loading }
+        let (api, profileID) = (api, profileID)
+        async let loaded = api.profile(profileID)
+        await catalogs.loadIfNeeded()
         do {
-            profile = try await api.profile(profileID)
+            var profile = try await loaded
+            // Profiles carry tags as keys or texts; keep keys, as edits send them.
+            if let tags = catalogs.tags { profile.tags = profile.tags.map(tags.key(for:)) }
+            self.profile = profile
             state = .loaded
         } catch {
             if profile == nil { state = .failed(Failure(error)) }
         }
-        if genders.isEmpty, let genders = try? await api.genders() { self.genders = genders }
-        if pronouns.isEmpty, let pronouns = try? await api.pronouns() { self.pronouns = pronouns }
     }
 
-    /// Saves an edit. Throws ``GrindrError/rejectedText`` when moderation
-    /// refuses the name or text.
-    /// Saves what differs between `edit` and `original`, the edit it started from.
-    public func save(_ edit: ProfileEdit, from original: ProfileEdit) async throws {
+    /// Saves what the edit changed. Throws ``GrindrError/rejectedText`` when
+    /// moderation refuses the name or text.
+    public func save(_ edit: ProfileEdit) async throws {
         guard let profile else { return }
-        guard let patch = edit.patch(from: original) else { return }
+        guard let patch = edit.patch(from: ProfileEdit(profile)) else { return }
         try await api.updateProfile(patch)
         self.profile = edit.applied(to: profile)
     }
@@ -190,10 +194,6 @@ public final class MeModel {
             actionFailure = Failure(error)
         }
     }
-
-    public func gender(_ id: Int) -> Gender? { genders.first { $0.id == id } }
-
-    public func pronoun(_ id: Int) -> Pronoun? { pronouns.first { $0.id == id } }
 
     public func loadBlocked() async {
         if blocked.isEmpty { blockedState = .loading }

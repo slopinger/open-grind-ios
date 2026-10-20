@@ -9,9 +9,6 @@ public final class BrowseModel {
     public private(set) var state: LoadState = .idle
     public private(set) var isLoadingMore = false
     public private(set) var filters = BrowseFilters()
-    /// The tags to filter by, once ``loadTagCatalog()`` has run.
-    public private(set) var tagCatalog: ProfileTagCatalog?
-    public private(set) var tagCatalogState: LoadState = .idle
     /// A place you are looking around instead of where you are.
     public private(set) var exploring: ExplorePlace?
 
@@ -112,18 +109,6 @@ public final class BrowseModel {
         profiles = []
         nextPage = nil
         await refresh()
-    }
-
-    /// Loads the tags the filters offer, unless they are already loaded.
-    public func loadTagCatalog() async {
-        guard tagCatalog == nil, !tagCatalogState.isLoading else { return }
-        tagCatalogState = .loading
-        do {
-            tagCatalog = try await api.profileTags()
-            tagCatalogState = .loaded
-        } catch {
-            tagCatalogState = .failed(Failure(error))
-        }
     }
 
     // MARK: Updates from elsewhere

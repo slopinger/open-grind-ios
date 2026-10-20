@@ -5,24 +5,20 @@ import SwiftUI
 /// change them, on their own screen.
 struct EditProfileView: View {
     let me: MeModel
-    private let profile: Profile
+    private let original: ProfileEdit
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AccountSession.self) private var session
-    /// What the form started with; its tags are matched to the catalog once it loads.
-    @State private var original: ProfileEdit
     @State private var edit: ProfileEdit
     @State private var openWheel: String?
     @State private var isSaving = false
     @State private var isConfirmingDiscard = false
     @State private var failure: Failure?
 
-    init(profile: Profile, me: MeModel, tagCatalog: ProfileTagCatalog?) {
+    init(profile: Profile, me: MeModel) {
         self.me = me
-        self.profile = profile
-        let edit = ProfileEdit(profile, tagCatalog: tagCatalog)
-        _original = State(initialValue: edit)
-        _edit = State(initialValue: edit)
+        original = ProfileEdit(profile)
+        _edit = State(initialValue: original)
     }
 
     private var hasChanges: Bool { edit != original }
@@ -67,14 +63,6 @@ struct EditProfileView: View {
                 Button("Keep Editing", role: .cancel) {}
             }
             .failureAlert($failure)
-            .task { await session.browse.loadTagCatalog() }
-            .onChange(of: session.browse.tagCatalog) { _, catalog in
-                // Opened before the catalog arrived: match the tags now, unless they were edited.
-                guard let catalog, edit.tags == original.tags else { return }
-                let tags = ProfileEdit(profile, tagCatalog: catalog).tags
-                original.tags = tags
-                edit.tags = tags
-            }
         }
     }
 
@@ -107,7 +95,7 @@ struct EditProfileView: View {
 
     private var tagsSection: some View {
         Section {
-            TagPickerRow(selection: tagKeys, limit: ProfileEdit.maxTags)
+            TagPickerRow(selection: $edit.tags, limit: ProfileEdit.maxTags)
         } footer: {
             Text("Up to \(ProfileEdit.maxTags) interests that show on your profile and help people find you.")
         }
@@ -189,17 +177,17 @@ struct EditProfileView: View {
                 title: "Gender", selection: $edit.genderIDs, choices: genderChoices, limit: ProfileEdit.maxGenders)
             ChoiceRow(
                 title: "Pronouns", selection: $edit.pronounIDs,
-                choices: me.pronouns.map { Choice(id: $0.id, name: $0.name) }, limit: ProfileEdit.maxPronouns)
+                choices: session.catalogs.pronouns.map { Choice(id: $0.id, name: $0.name) },
+                limit: ProfileEdit.maxPronouns)
             MultiSelectRow(title: "Tribes", selection: $edit.tribes)
             Toggle("Show Tribes", isOn: $edit.showsTribes)
         }
     }
 
-    /// The genders a profile can show, plus any you have that are no longer offered.
     private var genderChoices: [Choice] {
-        let offered = Gender.profileOptions(me.genders)
-        let kept = edit.genderIDs.filter { id in !offered.contains { $0.id == id } }.compactMap { me.gender($0) }
-        return (offered + kept).map { Choice(id: $0.id, name: $0.name, excludes: $0.excludedOnProfile) }
+        Gender.profileOptions(session.catalogs.genders, keeping: edit.genderIDs).map {
+            Choice(id: $0.id, name: $0.name, excludes: $0.excludedOnProfile)
+        }
     }
 
     private var healthSection: some View {
@@ -225,20 +213,6 @@ struct EditProfileView: View {
     }
 
     // MARK: Bindings
-
-    /// The chosen tags by key, for the tag list.
-    private var tagKeys: Binding<Set<String>> {
-        Binding {
-            Set(edit.tags.map(\.key))
-        } set: { keys in
-            let catalog = session.browse.tagCatalog
-            let current = edit.tags
-            edit.tags = Set(
-                keys.map { key in
-                    current.first { $0.key == key } ?? catalog?.tag(forKey: key) ?? ProfileTag(key: key, text: key)
-                })
-        }
-    }
 
     private var hasTestDate: Binding<Bool> {
         Binding {
@@ -271,7 +245,7 @@ struct EditProfileView: View {
         Task {
             defer { isSaving = false }
             do {
-                try await me.save(edit, from: original)
+                try await me.save(edit)
                 dismiss()
             } catch {
                 failure = Failure(error)

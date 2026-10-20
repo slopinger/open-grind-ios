@@ -78,17 +78,16 @@ struct RequestTests {
                 tags: [ProfileTag(key: "hiking", text: "Hiking"), ProfileTag(key: "coffee", text: "Coffee")])
         ])
         // Profiles carry either keys or texts; both match the catalog.
-        let original = ProfileEdit(Profile(id: 1, tags: ["Hiking", "coffee"]), tagCatalog: catalog)
-        #expect(
-            original.tags == [ProfileTag(key: "hiking", text: "Hiking"), ProfileTag(key: "coffee", text: "Coffee")])
+        #expect(["Hiking", "coffee", "Unknown"].map(catalog.key(for:)) == ["hiking", "coffee", "Unknown"])
+
+        let original = ProfileEdit(Profile(id: 1, tags: ["hiking", "coffee"]))
         #expect(original.patch(from: original) == nil)
-
         var edit = original
-        edit.tags.remove(ProfileTag(key: "hiking", text: "Hiking"))
-        #expect(edit.patch(from: original) == .object(["profileTags": .array([.string("coffee")])]))
-        #expect(edit.applied(to: Profile(id: 1)).tags == ["Coffee"])
+        edit.tags.remove("hiking")
+        #expect(edit.patch(from: original) == .object(["profileTags": .strings(["coffee"])]))
+        #expect(edit.applied(to: Profile(id: 1)).tags == ["coffee"])
 
-        edit.tags = Set((0...ProfileEdit.maxTags).map { ProfileTag(key: "\($0)", text: "\($0)") })
+        edit.tags = Set((0...ProfileEdit.maxTags).map(String.init))
         #expect(!edit.isValid)
     }
 

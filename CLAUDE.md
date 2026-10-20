@@ -81,8 +81,9 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
 - Form conventions: every option list (single or multiple choice, tags) opens its own page; numbers
   (age, height, weight, filter ranges) use `WheelPickerRow`, which opens a wheel below the row, one at
   a time per form. Photos are edited from Edit Profile and save immediately.
-- Own tags: `profileTags` keys in the profile PATCH (max 10). Profiles carry keys or texts;
-  `ProfileEdit(profile, tagCatalog:)` matches both.
+- Own tags: `profileTags` keys in the profile PATCH (max 10). Profiles carry keys or texts; `MeModel`
+  turns yours into keys when it loads (`ProfileTagCatalog.key(for:)`), so `ProfileEdit.tags` are plain keys.
+  Genders, pronouns and tags live in `AccountSession.catalogs` (`CatalogModel`), loaded with your profile.
 - Large titles: no custom top bars as `safeAreaInset` with `.background(.bar)` (it ignores all safe area
   edges by default and covers the large title under iOS 26+'s transparent navigation bar). The Browse
   explore/filter row is the first view of the grid's content instead.

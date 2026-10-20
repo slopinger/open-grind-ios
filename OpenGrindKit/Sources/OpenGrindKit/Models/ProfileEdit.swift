@@ -36,12 +36,10 @@ public struct ProfileEdit: Hashable, Sendable {
     /// In the order they were chosen.
     public var genderIDs: [Int]
     public var pronounIDs: [Int]
-    /// Sent by key; the text is what your profile shows.
-    public var tags: Set<ProfileTag>
+    /// Catalog keys, as ``MeModel`` keeps your profile's tags.
+    public var tags: Set<String>
 
-    /// - Parameter tagCatalog: matches your tags to catalog keys; without it, a tag's
-    ///   key is the text the profile carries.
-    public init(_ profile: Profile, tagCatalog: ProfileTagCatalog? = nil) {
+    public init(_ profile: Profile) {
         displayName = profile.displayName ?? ""
         aboutMe = profile.aboutMe ?? ""
         age = profile.age
@@ -66,7 +64,7 @@ public struct ProfileEdit: Hashable, Sendable {
         vaccines = Set(profile.vaccines)
         genderIDs = profile.genderIDs
         pronounIDs = profile.pronounIDs
-        tags = Set(profile.tags.map { tagCatalog?.tag(matching: $0) ?? ProfileTag(key: $0, text: $0) })
+        tags = Set(profile.tags)
     }
 
     /// Whether the edit can be saved.
@@ -116,9 +114,7 @@ public struct ProfileEdit: Hashable, Sendable {
         if vaccines != original.vaccines { fields["vaccines"] = set(vaccines) }
         if genderIDs != original.genderIDs { fields["genders"] = .ints(genderIDs) }
         if pronounIDs != original.pronounIDs { fields["pronouns"] = .ints(pronounIDs) }
-        if Set(tags.map(\.key)) != Set(original.tags.map(\.key)) {
-            fields["profileTags"] = .array(tags.map(\.key).sorted().map(JSONValue.string))
-        }
+        if tags != original.tags { fields["profileTags"] = .strings(tags.sorted()) }
         return fields.isEmpty ? nil : .object(fields)
     }
 
@@ -151,7 +147,7 @@ public struct ProfileEdit: Hashable, Sendable {
         profile.vaccines = Vaccine.allCases.filter(vaccines.contains)
         profile.genderIDs = genderIDs
         profile.pronounIDs = pronounIDs
-        profile.tags = tags.map(\.text).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        profile.tags = tags.sorted()
         return profile
     }
 }

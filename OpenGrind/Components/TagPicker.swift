@@ -18,9 +18,9 @@ struct TagPickerRow: View {
             LabeledContent("Tags") {
                 if selection.isEmpty {
                     Text(emptyLabel)
-                } else if let catalog = session.browse.tagCatalog {
+                } else if let catalog = session.catalogs.tags {
                     Text(
-                        selection.map { catalog.text(forKey: $0) ?? $0 }.sorted()
+                        selection.map { catalog.tag(forKey: $0)?.text ?? $0 }.sorted()
                             .formatted(.list(type: limit == nil ? .or : .and))
                     )
                     .lineLimit(1)
@@ -29,7 +29,7 @@ struct TagPickerRow: View {
                 }
             }
         }
-        .task { await session.browse.loadTagCatalog() }
+        .task { await session.catalogs.loadTags() }
     }
 }
 
@@ -42,14 +42,14 @@ struct TagPickerList: View {
     @Environment(AccountSession.self) private var session
     @State private var query = ""
 
-    private var browse: BrowseModel { session.browse }
+    private var catalogs: CatalogModel { session.catalogs }
 
     var body: some View {
         Group {
-            if let catalog = browse.tagCatalog {
+            if let catalog = catalogs.tags {
                 list(catalog)
-            } else if let failure = browse.tagCatalogState.failure {
-                FailureView(failure: failure) { await browse.loadTagCatalog() }
+            } else if let failure = catalogs.tagsState.failure {
+                FailureView(failure: failure) { await catalogs.loadTags() }
             } else {
                 LoadingView()
             }
@@ -58,7 +58,7 @@ struct TagPickerList: View {
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search Tags")
         .sensoryFeedback(.selection, trigger: selection)
-        .task { await browse.loadTagCatalog() }
+        .task { await catalogs.loadTags() }
     }
 
     @ViewBuilder

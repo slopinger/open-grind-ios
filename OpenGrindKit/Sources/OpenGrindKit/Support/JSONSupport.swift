@@ -130,6 +130,10 @@ public enum JSONValue: Hashable, Sendable, Encodable {
     public static func ints(_ values: some Sequence<Int>) -> JSONValue {
         .array(values.map(JSONValue.int))
     }
+
+    public static func strings(_ values: some Sequence<String>) -> JSONValue {
+        .array(values.map(JSONValue.string))
+    }
 }
 
 enum JSON {

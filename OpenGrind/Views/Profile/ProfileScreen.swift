@@ -55,7 +55,7 @@ private struct ProfileContent: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         photos(profile)
-                        ProfileDetails(profile: profile, me: session.me)
+                        ProfileDetails(profile: profile, catalogs: session.catalogs)
                             .padding(.horizontal)
                             .padding(.vertical, 20)
                     }

@@ -70,7 +70,8 @@ struct DemoTests {
         #expect(session.interest.views.hiddenCount == 4)
 
         #expect(session.me.profile?.displayName == "Alex")
-        #expect(session.me.genders.count == 5)
+        #expect(session.catalogs.genders.count == 5)
+        #expect(session.catalogs.tags != nil, "your profile loads the catalogs with it")
     }
 
     @Test func filtersApply() async throws {
@@ -84,9 +85,9 @@ struct DemoTests {
 
     @Test func tagFiltersMatchProfileTags() async throws {
         let session = try await signedIn()
-        await session.browse.loadTagCatalog()
-        let catalog = try #require(session.browse.tagCatalog)
-        #expect(catalog.text(forKey: "hiking") == "Hiking")
+        await session.catalogs.loadTags()
+        let catalog = try #require(session.catalogs.tags)
+        #expect(catalog.tag(forKey: "hiking")?.text == "Hiking")
         var filters = BrowseFilters()
         filters.tags = ["hiking"]
         await session.browse.apply(filters)
@@ -129,24 +130,21 @@ struct DemoTests {
 
         await session.me.loadIfNeeded()
         let profile = try #require(session.me.profile)
-        await session.browse.loadTagCatalog()
-        let catalog = try #require(session.browse.tagCatalog)
-        let original = ProfileEdit(profile, tagCatalog: catalog)
-        var edit = original
+        var edit = ProfileEdit(profile)
         edit.aboutMe = "Updated"
         edit.position = .top
-        edit.tags = [try #require(catalog.tag(forKey: "hiking"))]
+        edit.tags = ["hiking"]
         edit.genderIDs = [4]
         edit.pronounIDs = [1, 3]
-        try await session.me.save(edit, from: original)
-        #expect(session.me.profile?.tags == ["Hiking"])
+        try await session.me.save(edit)
+        #expect(session.me.profile?.tags == ["hiking"])
         await session.me.refresh()
         let saved = try #require(session.me.profile)
         #expect(saved.aboutMe == "Updated")
         #expect(saved.position == .top)
-        #expect(saved.tags == ["Hiking"])
+        // The demo sends the texts back, as other profiles carry them; MeModel keeps keys.
+        #expect(saved.tags == ["hiking"])
         #expect(saved.genderIDs == [4] && saved.pronounIDs == [1, 3])
-        #expect(ProfileEdit(saved, tagCatalog: catalog).tags.map(\.key) == ["hiking"])
     }
 
     @Test func photosCanBeSent() async throws {
