@@ -1,0 +1,127 @@
+import Foundation
+import Observation
+
+/// Everything that belongs to the signed-in account: its API, realtime events
+/// and the state of each tab.
+@MainActor
+@Observable
+public final class AccountSession {
+    public let profileID: ProfileID
+    public let api: GrindrAPI
+    public internal(set) var isRealtimeConnected = false
+
+    public let browse: BrowseModel
+    public let inbox: InboxModel
+    public let interest: InterestModel
+    public let me: MeModel
+
+    @ObservationIgnored private var listeners: [UUID: (RealtimeEvent) -> Void] = [:]
+    @ObservationIgnored private var chats: [String: ChatModel] = [:]
+    @ObservationIgnored private var lastLocationUpdate: Date?
+    @ObservationIgnored private let location: any LocationProviding
+
+    init(profileID: ProfileID, api: GrindrAPI, location: any LocationProviding) {
+        self.profileID = profileID
+        self.api = api
+        self.location = location
+        browse = BrowseModel(api: api, location: location)
+        inbox = InboxModel(api: api, me: profileID)
+        interest = InterestModel(api: api, me: profileID)
+        me = MeModel(api: api, profileID: profileID)
+        browse.session = self
+        inbox.session = self
+    }
+
+    func start() {
+        Task {
+            try? await api.transport.connectRealtime()
+        }
+        Task { await updateLocationIfNeeded() }
+    }
+
+    func stop() {
+        listeners.removeAll()
+        chats.removeAll()
+    }
+
+    func becameActive() {
+        Task { await updateLocationIfNeeded() }
+        Task { await inbox.refresh() }
+    }
+
+    /// Sends your location to Grindr at most every five minutes, so others see
+    /// a current distance.
+    func updateLocationIfNeeded() async {
+        if let lastLocationUpdate, Date.now.timeIntervalSince(lastLocationUpdate) < 300 { return }
+        guard let geohash = try? await location.currentGeohash() else { return }
+        lastLocationUpdate = .now
+        try? await api.updateLocation(geohash: geohash)
+    }
+
+    // MARK: Chats
+
+    /// The chat with `profileID`, shared across screens so drafts and loaded
+    /// messages survive navigation.
+    public func chat(with profileID: ProfileID, name: String? = nil) -> ChatModel {
+        let conversationID = Conversation.id(between: self.profileID, and: profileID)
+        if let chat = chats[conversationID] { return chat }
+        let chat = ChatModel(
+            conversationID: conversationID, otherProfileID: profileID, name: name, api: api,
+            me: self.profileID)
+        chat.session = self
+        chats[conversationID] = chat
+        return chat
+    }
+
+    public func chat(for conversation: Conversation) -> ChatModel? {
+        guard let other = conversation.otherProfileID(me: profileID) else { return nil }
+        return chat(with: other, name: conversation.name)
+    }
+
+    // MARK: Events
+
+    func receive(_ event: RealtimeEvent) {
+        inbox.handle(event)
+        interest.handle(event)
+        browse.handle(event)
+        for chat in chats.values {
+            chat.handle(event)
+        }
+        for listener in listeners.values {
+            listener(event)
+        }
+    }
+
+    /// Calls `listener` for every realtime event until the returned token is
+    /// passed to ``removeListener(_:)``.
+    @discardableResult
+    public func addListener(_ listener: @escaping (RealtimeEvent) -> Void) -> UUID {
+        let token = UUID()
+        listeners[token] = listener
+        return token
+    }
+
+    public func removeListener(_ token: UUID) {
+        listeners[token] = nil
+    }
+
+    // MARK: Cross-tab updates
+
+    /// A profile was blocked or hidden: drop it everywhere.
+    func forget(_ profileID: ProfileID) {
+        browse.remove(profileID)
+        inbox.remove(conversationID: Conversation.id(between: self.profileID, and: profileID))
+        interest.remove(profileID)
+        chats[Conversation.id(between: self.profileID, and: profileID)] = nil
+    }
+
+    func favoriteChanged(_ profileID: ProfileID, isFavorite: Bool) {
+        browse.setFavorite(profileID, isFavorite)
+        inbox.setFavorite(profileID, isFavorite)
+    }
+
+    /// For tests and the demo: process an event as if it came from the server.
+    public func simulate(_ event: RealtimeEvent) {
+        receive(event)
+    }
+}

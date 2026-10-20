@@ -1,0 +1,5 @@
+module opengrind_coreFFI {
+    header "include/opengrind_coreFFI.h"
+    link "opengrind_core"
+    export *
+}

@@ -1,0 +1,82 @@
+import Foundation
+import Observation
+
+/// Taps you received and who viewed your profile.
+@MainActor
+@Observable
+public final class InterestModel {
+    public private(set) var taps: [Tap] = []
+    public private(set) var views = ProfileViews(viewers: [])
+    public private(set) var tapsState: LoadState = .idle
+    public private(set) var viewsState: LoadState = .idle
+    /// New taps and views since the Interest tab was last on screen.
+    public private(set) var unseenCount = 0
+
+    @ObservationIgnored private let api: GrindrAPI
+    @ObservationIgnored private let me: ProfileID
+
+    init(api: GrindrAPI, me: ProfileID) {
+        self.api = api
+        self.me = me
+    }
+
+    public func loadIfNeeded() async {
+        async let taps: Void = tapsState == .idle ? refreshTaps() : ()
+        async let views: Void = viewsState == .idle ? refreshViews() : ()
+        _ = await (taps, views)
+    }
+
+    public func refresh() async {
+        async let taps: Void = refreshTaps()
+        async let views: Void = refreshViews()
+        _ = await (taps, views)
+    }
+
+    public func refreshTaps() async {
+        if taps.isEmpty { tapsState = .loading }
+        do {
+            taps = try await api.receivedTaps().sorted { $0.date > $1.date }
+            tapsState = .loaded
+        } catch {
+            if taps.isEmpty { tapsState = .failed(Failure(error)) }
+        }
+    }
+
+    public func refreshViews() async {
+        if views.viewers.isEmpty { viewsState = .loading }
+        do {
+            let views = try await api.profileViews()
+            self.views = ProfileViews(
+                viewers: views.viewers.sorted {
+                    ($0.lastViewed ?? .distantPast) > ($1.lastViewed ?? .distantPast)
+                },
+                hiddenCount: views.hiddenCount)
+            viewsState = .loaded
+        } catch {
+            if views.viewers.isEmpty { viewsState = .failed(Failure(error)) }
+        }
+    }
+
+    public func markSeen() {
+        unseenCount = 0
+    }
+
+    func remove(_ profileID: ProfileID) {
+        taps.removeAll { $0.profileID == profileID }
+        views.viewers.removeAll { $0.profileID == profileID }
+    }
+
+    func handle(_ event: RealtimeEvent) {
+        switch event {
+        case .tapReceived(let tap) where tap.profileID != me:
+            taps.removeAll { $0.profileID == tap.profileID }
+            taps.insert(tap, at: 0)
+            unseenCount += 1
+        case .profileViewed(let viewer, _, _) where viewer != me:
+            unseenCount += 1
+            Task { await refreshViews() }
+        default:
+            break
+        }
+    }
+}
