@@ -1,0 +1,11 @@
+.build/
+.swiftpm/
+result
+result-*
+xcuserdata/
+DerivedData/
+*.xcuserstate
+# Built by scripts/build-core-xcframework.sh
+OpenGrindKit/Frameworks/
+# CI and local xcodebuild output
+build/
