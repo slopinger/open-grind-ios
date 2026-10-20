@@ -68,7 +68,14 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   `PUT /v3/me/profile/images {primaryImageHash, secondaryImageHashes}` (max 6 in total);
   `DELETE /v3/me/profile/images {media_hashes}`. New photos are "Pending" until moderated.
 - Tags: catalog `GET /v1/tags` (per language, first one used), cascade filter `tags=key1,key2`;
-  profiles carry tag texts. Explore: `exploreGeoHash` next to `nearbyGeoHash` on `/v4/cascade`.
+  profiles carry tag texts. Explore: `exploreGeoHash` next to `nearbyGeoHash` on `/v4/cascade`; without
+  XTRA/Unlimited Grindr answers with the bare text `CAS-4001` (mapped to `requiresSubscription`). Sending
+  the place as `nearbyGeoHash` instead would work for free accounts but makes Grindr treat it as your
+  own location, so it is not done.
+- Genders/pronouns: `genders`/`pronouns` ID lists in the profile PATCH, max 3 each (upstream). Gender
+  catalog: `displayGroup` 0 = not offered, `sortProfile`, `excludeOnProfileSelection`.
+- Filters persist per account (`PreferenceStore`, UserDefaults key `browseFilters.<profileID>`), cleared on
+  sign-out; the explored place is never persisted.
 - The UI tour also keeps `11-tags`, `12-explore`, `13-exploring`, `14-photos`, `15-photo-menu`,
   `16-photos-reordered`, `17-filter-wheel`, `18-edit-profile`, `19-age-wheel`.
 - Form conventions: every option list (single or multiple choice, tags) opens its own page; numbers
