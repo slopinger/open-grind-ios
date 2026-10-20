@@ -71,4 +71,7 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   profiles carry tag texts. Explore: `exploreGeoHash` next to `nearbyGeoHash` on `/v4/cascade`.
 - The UI tour also keeps `11-tags`, `12-explore`, `13-exploring`, `14-photos`, `15-photo-menu`,
   `16-photos-reordered`.
+- Large titles: no custom top bars as `safeAreaInset` with `.background(.bar)` (it ignores all safe area
+  edges by default and covers the large title under iOS 26+'s transparent navigation bar). The Browse
+  explore/filter row is the first view of the grid's content instead.
 - Never sign in with a real account from tests or CI; there are no Grindr credentials for this project.
