@@ -63,14 +63,22 @@
         }
       );
 
-      # Built by hydra.kyouma.net (project open-grind-ios): every check, per Linux
-      # system, named like the official Hydra convention (`core.x86_64-linux`).
+      # Built by hydra.kyouma.net (project open-grind-ios): every check on each Linux
+      # system where it evaluates, named like `core.x86_64-linux`. nixpkgs marks Swift
+      # broken on aarch64-linux, so only the Rust checks run there until that changes.
       hydraJobs =
         let
-          linux = [ "x86_64-linux" ];
+          linux = [
+            "x86_64-linux"
+            "aarch64-linux"
+          ];
+          evaluates = drv: (builtins.tryEval drv.drvPath).success;
         in
         nixpkgs.lib.genAttrs (builtins.attrNames self.checks.x86_64-linux) (
-          check: nixpkgs.lib.genAttrs linux (system: self.checks.${system}.${check})
+          check:
+          nixpkgs.lib.filterAttrs (_: evaluates) (
+            nixpkgs.lib.genAttrs linux (system: self.checks.${system}.${check})
+          )
         );
 
       devShells = forAllSystems (pkgs: {
