@@ -50,6 +50,12 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   UI changes visibly.
 
 ## Gotchas
+- Sign-in is email only, deliberately (decided 2026-10-20; reasons in README "Sign-in"). Apple: no
+  Grindr vendor and tokens are app-bound. Phone: `/v4/sms/sessions` body undocumented, grindr.rs has
+  no phone `SessionKind`. Google/Facebook: crate supports tokens (`/v8/sessions/thirdparty`, Google
+  via `/v3/users/thirdparty/exchange`), but only tokens for Grindr's own OAuth apps work; the user
+  declined both a paste-token screen and impersonating Grindr's OAuth clients. Revisit if grindr.rs
+  gains phone sessions.
 - Swift Testing on Linux crashes when a cancelled `Task.sleep` throws; `SWT_SWIFT_ERROR_BACKTRACING_ENABLED=0`
   is set in the devShell and the Nix build.
 - `String(localized:)` is unavailable in swift-corelibs Foundation: no localization inside the kit;

@@ -35,6 +35,19 @@ Everyone shown is made up; the avatars are DiceBear's Notionists by Zoish (CC0).
 Built to Apple's Human Interface Guidelines: system navigation, tab bar and sheets; Dynamic Type,
 VoiceOver labels and actions, Reduce Motion and dark mode; Liquid Glass on iOS 26, iOS 18 and later.
 
+### Sign-in
+
+Only email and password. Other methods were looked into:
+
+- **Apple**: not possible. Grindr's API has no Apple sign-in, and Apple identity tokens are bound
+  to the app that requested them, so Grindr would never accept one issued to Open Grind.
+- **Phone number**: Grindr has `POST /v4/sms/sessions`, but its request is undocumented and
+  `grindr.rs` cannot refresh phone sessions. Possible once both are worked out upstream.
+- **Google and Facebook**: `grindr.rs` can sign in with a provider token, but Grindr only accepts
+  tokens issued to its own Google and Facebook apps. Upstream gets one through an Android-only
+  companion app or a pasted token; on iOS the only smooth way would be to pose as Grindr's app,
+  which Open Grind doesn't do.
+
 ## Privacy
 
 - Your location is rounded to a 0.001° grid (about 100 m) before it is sent.
