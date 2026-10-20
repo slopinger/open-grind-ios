@@ -65,6 +65,7 @@ nix flake check      # all of the above
 nix develop          # Swift, swift-format and Rust toolchains
 ```
 
+[Hydra](https://hydra.kyouma.net/jobset/open-grind-ios/main) builds these checks on every push to `main`.
 GitHub Actions builds the app for iPhone, runs the unit and UI tests on a simulator and uploads
 the screenshots of the demo tour as an artifact.
 
