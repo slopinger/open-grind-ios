@@ -11,7 +11,6 @@ final class FakeTransport: GrindrTransport, @unchecked Sendable {
     private var eventHandler: (@Sendable (TransportEvent) -> Void)?
     private var recorded: [APIRequest] = []
     var signInResult = SignInResult(profileID: 1)
-    var signInError: (any Error)?
 
     init(_ handler: @escaping Handler = { _ in APIResponse(status: 200, body: Data("{}".utf8)) }) {
         self.handler = handler
@@ -32,7 +31,6 @@ final class FakeTransport: GrindrTransport, @unchecked Sendable {
     }
 
     func signIn(email: String, password: String, geohash: String?) async throws -> SignInResult {
-        if let signInError { throw signInError }
         emit(.credentialsChanged(#"{"profile_id":"\#(signInResult.profileID)","auth_token":"t"}"#))
         return signInResult
     }

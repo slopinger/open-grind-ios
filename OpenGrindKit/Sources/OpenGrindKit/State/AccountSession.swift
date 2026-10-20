@@ -16,7 +16,6 @@ public final class AccountSession {
     public let me: MeModel
     public let catalogs: CatalogModel
 
-    @ObservationIgnored private var listeners: [UUID: (RealtimeEvent) -> Void] = [:]
     @ObservationIgnored private var chats: [String: ChatModel] = [:]
     @ObservationIgnored private var lastLocationUpdate: Date?
     @ObservationIgnored private let location: any LocationProviding
@@ -50,7 +49,6 @@ public final class AccountSession {
     }
 
     func stop() {
-        listeners.removeAll()
         chats.removeAll()
     }
 
@@ -97,22 +95,6 @@ public final class AccountSession {
         for chat in chats.values {
             chat.handle(event)
         }
-        for listener in listeners.values {
-            listener(event)
-        }
-    }
-
-    /// Calls `listener` for every realtime event until the returned token is
-    /// passed to ``removeListener(_:)``.
-    @discardableResult
-    public func addListener(_ listener: @escaping (RealtimeEvent) -> Void) -> UUID {
-        let token = UUID()
-        listeners[token] = listener
-        return token
-    }
-
-    public func removeListener(_ token: UUID) {
-        listeners[token] = nil
     }
 
     // MARK: Cross-tab updates

@@ -31,7 +31,7 @@ public final class ChatModel: Identifiable {
     public private(set) var items: [Item] = []
     public private(set) var state: LoadState = .idle
     public private(set) var isLoadingOlder = false
-    public private(set) var hasOlderMessages = false
+    public var hasOlderMessages: Bool { olderPageKey != nil }
     /// The other side has read everything up to this date.
     public private(set) var readByOtherUntil: Date?
     public private(set) var isOtherTyping = false
@@ -41,7 +41,8 @@ public final class ChatModel: Identifiable {
     @ObservationIgnored weak var session: AccountSession?
     @ObservationIgnored private let api: GrindrAPI
     public nonisolated let me: ProfileID
-    @ObservationIgnored private var olderPageKey: String?
+    /// Where the next older page starts; `nil` at the start of the conversation.
+    private var olderPageKey: String?
     @ObservationIgnored private var outgoing: [String: OutgoingMessage] = [:]
     @ObservationIgnored private var photos: [String: (data: Data, contentType: String)] = [:]
     @ObservationIgnored private var typingReset: Task<Void, Never>?
@@ -104,7 +105,6 @@ public final class ChatModel: Identifiable {
             items =
                 Self.visible(page.messages.reversed()).map { Item(message: $0, delivery: .sent) } + pending
             olderPageKey = page.nextPageKey
-            hasOlderMessages = page.nextPageKey != nil
             state = .loaded
             markReadIfNeeded()
         } catch {
@@ -114,7 +114,7 @@ public final class ChatModel: Identifiable {
     }
 
     public func loadOlder() async {
-        guard !isLoadingOlder, hasOlderMessages, let key = olderPageKey else { return }
+        guard !isLoadingOlder, let key = olderPageKey else { return }
         isLoadingOlder = true
         defer { isLoadingOlder = false }
         do {
@@ -123,7 +123,6 @@ public final class ChatModel: Identifiable {
             let older = Self.visible(page.messages.reversed()).filter { !known.contains($0.id) }
             items.insert(contentsOf: older.map { Item(message: $0, delivery: .sent) }, at: 0)
             olderPageKey = page.nextPageKey
-            hasOlderMessages = !page.messages.isEmpty && page.nextPageKey != nil
         } catch {
             actionFailure = Failure(error)
         }
@@ -296,7 +295,7 @@ public final class ChatModel: Identifiable {
             setTyping(isTyping)
         case .conversationsDeleted(let ids) where ids.contains(conversationID):
             items.removeAll()
-            hasOlderMessages = false
+            olderPageKey = nil
         default:
             break
         }

@@ -1,5 +1,4 @@
 import CoreLocation
-import Observation
 import OpenGrindKit
 
 /// Finds the device's location for the grid and distances.
@@ -8,22 +7,16 @@ import OpenGrindKit
 /// the app needs (positions are rounded to about 110 m before they are sent),
 /// and works with approximate location too.
 @MainActor
-@Observable
 final class LocationService: NSObject, LocationProviding, CLLocationManagerDelegate {
-    private(set) var authorization: CLAuthorizationStatus
-
-    @ObservationIgnored private let manager = CLLocationManager()
-    @ObservationIgnored private var waiters: [CheckedContinuation<CLLocation, any Error>] = []
-    @ObservationIgnored private var lastLocation: CLLocation?
+    private let manager = CLLocationManager()
+    private var waiters: [CheckedContinuation<CLLocation, any Error>] = []
+    private var lastLocation: CLLocation?
 
     override init() {
-        authorization = manager.authorizationStatus
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
     }
-
-    var isDenied: Bool { authorization == .denied || authorization == .restricted }
 
     nonisolated func currentGeohash() async throws -> String {
         let location = try await currentLocation()
@@ -65,7 +58,6 @@ final class LocationService: NSObject, LocationProviding, CLLocationManagerDeleg
     nonisolated func locationManagerDidChangeAuthorization(_: CLLocationManager) {
         MainActor.assumeIsolated {
             // The stored manager is the only one this delegate serves.
-            authorization = self.manager.authorizationStatus
             switch self.manager.authorizationStatus {
             case .denied: finish(.failure(.denied))
             case .restricted: finish(.failure(.restricted))

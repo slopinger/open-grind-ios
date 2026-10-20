@@ -230,7 +230,8 @@ public struct MessagePage: Sendable, Hashable, Decodable {
     public var lastRead: Date?
     public var profile: ConversationProfile?
     /// Pass to the next request to get older messages; `nil` at the start.
-    public var nextPageKey: String?
+    /// Pages are keyed by their oldest message, so an empty page is the end.
+    public var nextPageKey: String? { messages.last?.id }
 
     enum CodingKeys: String, CodingKey {
         case messages, lastReadTimestamp, profile
@@ -240,7 +241,6 @@ public struct MessagePage: Sendable, Hashable, Decodable {
         self.messages = messages
         self.lastRead = lastRead
         self.profile = profile
-        nextPageKey = messages.last?.id
     }
 
     public init(from decoder: any Decoder) throws {
@@ -248,8 +248,6 @@ public struct MessagePage: Sendable, Hashable, Decodable {
         messages = container.lossyArray(of: Message.self, forKey: .messages)
         lastRead = container.timestamp(forKey: .lastReadTimestamp)
         profile = container.lenient(ConversationProfile.self, forKey: .profile)
-        // Pages are keyed by their oldest message; an empty page is the end.
-        nextPageKey = messages.last?.id
     }
 }
 

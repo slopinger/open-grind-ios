@@ -78,9 +78,4 @@ public enum Geohash {
         func snap(_ degrees: Double) -> Double { (degrees * 1000).rounded() / 1000 }
         return encode(latitude: snap(latitude), longitude: snap(longitude))
     }
-
-    /// Whether `hash` is a full-precision geohash the API accepts.
-    public static func isValid(_ hash: String) -> Bool {
-        hash.count == precision && hash.allSatisfy { alphabet.contains($0) }
-    }
 }

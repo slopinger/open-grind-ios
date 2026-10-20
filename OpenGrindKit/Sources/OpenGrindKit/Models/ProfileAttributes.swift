@@ -292,10 +292,3 @@ public enum TapType: Int, ProfileAttribute {
         }
     }
 }
-
-/// A "Right Now" status on a profile or conversation.
-public enum RightNowStatus: String, Sendable, Hashable {
-    case notActive = "NOT_ACTIVE"
-    case hosting = "HOSTING"
-    case notHosting = "NOT_HOSTING"
-}

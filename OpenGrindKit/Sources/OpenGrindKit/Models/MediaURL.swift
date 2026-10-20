@@ -50,12 +50,11 @@ public enum MediaURL {
         return label.isEmpty ? words.joined(separator: " ") : label
     }
 
-    /// A media hash's full-size photo for the hash's thumbnail URL, or the URL
-    /// itself for anything else.
-    public static func fullSize(of url: URL) -> URL {
+    /// The media hash in a profile photo thumbnail URL, such as a grid tile's.
+    public static func mediaHash(ofThumbnail url: URL) -> String? {
         let thumbnail = "/images/\(ProfileImageSize.thumbnail.pathComponent)/"
-        guard url.host == "cdns.grindr.com", url.path.hasPrefix(thumbnail) else { return url }
-        return profileImage(String(url.path.dropFirst(thumbnail.count)), size: .full)
+        guard url.host == "cdns.grindr.com", url.path.hasPrefix(thumbnail) else { return nil }
+        return String(url.path.dropFirst(thumbnail.count))
     }
 
     /// `string` as a URL if it is an `https` URL on a host media may come from.

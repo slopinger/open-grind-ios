@@ -96,13 +96,13 @@ public final class BrowseModel {
         }
     }
 
-    /// Shows the profiles around `place` instead of around you, or around you
-    /// again when `nil`.
     /// Where you were when the grid last loaded, to start a map at.
     public var currentPlace: ExplorePlace? {
         geohash.flatMap(Geohash.decode).map { ExplorePlace(latitude: $0.latitude, longitude: $0.longitude) }
     }
 
+    /// Shows the profiles around `place` instead of around you, or around you
+    /// again when `nil`.
     public func explore(_ place: ExplorePlace?) async {
         guard place != exploring else { return }
         exploring = place
@@ -125,11 +125,10 @@ public final class BrowseModel {
     func handle(_ event: RealtimeEvent) {
         switch event {
         case .message(let message):
-            guard let index = profiles.firstIndex(where: { $0.id == message.senderID }) else { return }
-            profiles[index].hasChatted = true
-            if session?.inbox.openConversationID != message.conversationID {
-                profiles[index].unreadCount += 1
-            }
+            guard let index = profiles.firstIndex(where: { $0.id == message.senderID }),
+                session?.inbox.openConversationID != message.conversationID
+            else { return }
+            profiles[index].unreadCount += 1
         case .conversationRead(let conversationID, let reader, _) where reader == session?.profileID:
             guard let other = Conversation.otherProfileID(in: conversationID, me: reader),
                 let index = profiles.firstIndex(where: { $0.id == other })

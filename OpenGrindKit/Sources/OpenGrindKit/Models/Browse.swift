@@ -13,7 +13,6 @@ public struct GridProfile: Identifiable, Hashable, Sendable, OnlinePresence {
     public var position: SexualPosition?
     public var unreadCount: Int
     public var isFavorite: Bool
-    public var hasChatted: Bool
     public var hasViewed: Bool
     public var isVisiting: Bool
     public var isPopular: Bool
@@ -25,7 +24,7 @@ public struct GridProfile: Identifiable, Hashable, Sendable, OnlinePresence {
         photoURL: URL? = nil,
         onlineUntil: Date? = nil, lastOnline: Date? = nil, position: SexualPosition? = nil,
         unreadCount: Int = 0,
-        isFavorite: Bool = false, hasChatted: Bool = false, hasViewed: Bool = false,
+        isFavorite: Bool = false, hasViewed: Bool = false,
         isVisiting: Bool = false,
         isPopular: Bool = false, isLocked: Bool = false
     ) {
@@ -39,13 +38,36 @@ public struct GridProfile: Identifiable, Hashable, Sendable, OnlinePresence {
         self.position = position
         self.unreadCount = unreadCount
         self.isFavorite = isFavorite
-        self.hasChatted = hasChatted
         self.hasViewed = hasViewed
         self.isVisiting = isVisiting
         self.isPopular = isPopular
         self.isLocked = isLocked
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case profileId, displayName, age, distanceMeters, primaryImageUrl, onlineUntil, lastOnline
+        case sexualPosition, unreadCount, favorite, viewed, isVisiting, isPopular
+    }
+
+    /// A cascade item's `data`.
+    fileprivate init(from decoder: any Decoder, isLocked: Bool) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try container.decodeFlexibleInt(forKey: .profileId),
+            displayName: container.lenient(String.self, forKey: .displayName),
+            age: container.lenient(Int.self, forKey: .age),
+            distance: container.lenient(Double.self, forKey: .distanceMeters),
+            photoURL: container.lenient(String.self, forKey: .primaryImageUrl).flatMap(MediaURL.validated),
+            onlineUntil: container.timestamp(forKey: .onlineUntil),
+            lastOnline: container.timestamp(forKey: .lastOnline),
+            position: SexualPosition.known(container.lenient(Int.self, forKey: .sexualPosition)),
+            unreadCount: container.lenient(Int.self, forKey: .unreadCount) ?? 0,
+            isFavorite: container.flag(forKey: .favorite),
+            hasViewed: container.flag(forKey: .viewed),
+            isVisiting: container.flag(forKey: .isVisiting),
+            isPopular: container.flag(forKey: .isPopular),
+            isLocked: isLocked)
+    }
 }
 
 /// One page of the nearby grid.
@@ -81,65 +103,12 @@ extension CascadePage: Decodable {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             switch container.lenient(String.self, forKey: .type) {
             case "full_profile_v1", "smart_boost_profile_v1":
-                profile = container.lenient(ProfileData.self, forKey: .data)?.profile(isLocked: false)
+                profile = try? GridProfile(from: container.superDecoder(forKey: .data), isLocked: false)
             case "partial_profile_v1":
-                profile = container.lenient(ProfileData.self, forKey: .data)?.profile(isLocked: true)
+                profile = try? GridProfile(from: container.superDecoder(forKey: .data), isLocked: true)
             default:
                 profile = nil
             }
-        }
-    }
-
-    private struct ProfileData: Decodable {
-        var profileId: Int
-        var displayName: String?
-        var age: Int?
-        var distanceMeters: Double?
-        var primaryImageUrl: String?
-        var onlineUntil: Double?
-        var lastOnline: Double?
-        var sexualPosition: Int?
-        var unreadCount: Int?
-        var favorite: Bool?
-        var chatted: Bool?
-        var viewed: Bool?
-        var isVisiting: Bool?
-        var isPopular: Bool?
-
-        enum CodingKeys: String, CodingKey {
-            case profileId, displayName, age, distanceMeters, primaryImageUrl, onlineUntil, lastOnline
-            case sexualPosition, unreadCount, favorite, chatted, viewed, isVisiting, isPopular
-        }
-
-        init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            profileId = try container.decodeFlexibleInt(forKey: .profileId)
-            displayName = container.lenient(String.self, forKey: .displayName)
-            age = container.lenient(Int.self, forKey: .age)
-            distanceMeters = container.lenient(Double.self, forKey: .distanceMeters)
-            primaryImageUrl = container.lenient(String.self, forKey: .primaryImageUrl)
-            onlineUntil = container.lenient(Double.self, forKey: .onlineUntil)
-            lastOnline = container.lenient(Double.self, forKey: .lastOnline)
-            sexualPosition = container.lenient(Int.self, forKey: .sexualPosition)
-            unreadCount = container.lenient(Int.self, forKey: .unreadCount)
-            favorite = container.lenient(Bool.self, forKey: .favorite)
-            chatted = container.lenient(Bool.self, forKey: .chatted)
-            viewed = container.lenient(Bool.self, forKey: .viewed)
-            isVisiting = container.lenient(Bool.self, forKey: .isVisiting)
-            isPopular = container.lenient(Bool.self, forKey: .isPopular)
-        }
-
-        func profile(isLocked: Bool) -> GridProfile {
-            func date(_ milliseconds: Double?) -> Date? {
-                milliseconds.flatMap { $0 > 0 ? Date(milliseconds: Int64($0)) : nil }
-            }
-            return GridProfile(
-                id: profileId, displayName: displayName, age: age, distance: distanceMeters,
-                photoURL: primaryImageUrl.flatMap(MediaURL.validated), onlineUntil: date(onlineUntil),
-                lastOnline: date(lastOnline), position: SexualPosition.known(sexualPosition),
-                unreadCount: unreadCount ?? 0, isFavorite: favorite ?? false, hasChatted: chatted ?? false,
-                hasViewed: viewed ?? false, isVisiting: isVisiting ?? false, isPopular: isPopular ?? false,
-                isLocked: isLocked)
         }
     }
 
@@ -256,4 +225,16 @@ public struct ExplorePlace: Hashable, Sendable {
     }
 
     var geohash: String { Geohash.encode(latitude: latitude, longitude: longitude) }
+}
+
+extension Profile {
+    /// What the grid already knows about a profile, to show while it loads.
+    public init(_ tile: GridProfile) {
+        self.init(
+            id: tile.id, displayName: tile.displayName, age: tile.age, distance: tile.distance,
+            onlineUntil: tile.onlineUntil, lastSeen: tile.lastOnline,
+            photos: tile.photoURL.flatMap(MediaURL.mediaHash(ofThumbnail:)).map { [ProfilePhoto(mediaHash: $0)] } ?? [],
+            position: tile.position, isFavorite: tile.isFavorite, isVisiting: tile.isVisiting,
+            unreadCount: tile.unreadCount)
+    }
 }

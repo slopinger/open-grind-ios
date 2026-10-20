@@ -134,11 +134,6 @@ public struct Profile: Identifiable, Hashable, Sendable, OnlinePresence {
     }
 
     public var primaryPhoto: ProfilePhoto? { photos.first }
-
-    /// The conversation id of a chat between this profile and `profileID`.
-    public func conversationID(with profileID: ProfileID) -> String {
-        Conversation.id(between: id, and: profileID)
-    }
 }
 
 extension Profile: Decodable {

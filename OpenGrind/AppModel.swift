@@ -20,9 +20,8 @@ final class AppModel {
     private static let demoKey = "demoMode"
 
     init() {
-        let arguments = ProcessInfo.processInfo.arguments
-        let isDemo =
-            UserDefaults.standard.bool(forKey: Self.demoKey) || arguments.contains("-OpenGrindDemo")
+        // Also set by the launch argument `-demoMode YES`.
+        let isDemo = UserDefaults.standard.bool(forKey: Self.demoKey)
         let setup = Self.makeAccount(isDemo: isDemo, keychain: keychain, location: location)
         account = setup.account
         images = setup.images

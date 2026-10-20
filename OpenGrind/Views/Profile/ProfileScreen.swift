@@ -270,21 +270,3 @@ struct PendingReviewBadge: View {
             .padding(10)
     }
 }
-
-extension Profile {
-    /// What the grid already knows about a profile.
-    init(_ tile: GridProfile) {
-        let thumbnail = "/images/thumb/320x320/"
-        let photos: [ProfilePhoto] =
-            if let url = tile.photoURL, url.host == "cdns.grindr.com", url.path.hasPrefix(thumbnail) {
-                [ProfilePhoto(mediaHash: url.lastPathComponent)]
-            } else {
-                []
-            }
-        self.init(
-            id: tile.id, displayName: tile.displayName, age: tile.age, distance: tile.distance,
-            onlineUntil: tile.onlineUntil, lastSeen: tile.lastOnline, photos: photos,
-            position: tile.position,
-            isFavorite: tile.isFavorite, isVisiting: tile.isVisiting, unreadCount: tile.unreadCount)
-    }
-}

@@ -23,10 +23,4 @@ struct GeohashTests {
         #expect(abs(longitude - 13.405) < 0.000_01)
         #expect(Geohash.coarsen(Geohash.coarsen(precise)) == Geohash.coarsen(precise))
     }
-
-    @Test func validatesLengthAndAlphabet() {
-        #expect(Geohash.isValid("u4pruydqqvj8"))
-        #expect(!Geohash.isValid("u4pruydqqvj"))
-        #expect(!Geohash.isValid("u4pruydqqvja"))
-    }
 }
