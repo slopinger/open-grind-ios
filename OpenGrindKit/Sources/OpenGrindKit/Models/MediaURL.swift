@@ -65,6 +65,9 @@ public enum MediaURL {
         return isAllowed(host: host) ? url : nil
     }
 
+    /// Grindr signs chat and album media on CloudFront distributions that change,
+    /// so any of them is accepted, as in grindr's own media check. These URLs come
+    /// from Grindr's responses, which sign them, not from what the sender wrote.
     static func isAllowed(host: String) -> Bool {
         allowedHosts.contains(host) || host.hasSuffix(".cloudfront.net")
     }
