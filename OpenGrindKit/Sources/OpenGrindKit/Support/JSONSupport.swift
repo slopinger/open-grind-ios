@@ -48,8 +48,11 @@ extension KeyedDecodingContainer {
 
     /// A millisecond timestamp, `nil` when missing, zero, `null` or malformed.
     func timestamp(forKey key: Key) -> Date? {
-        guard let value = lenient(Double.self, forKey: key), value > 0 else { return nil }
-        return Date(milliseconds: Int64(value))
+        // Int64(exactly:) rather than Int64(_:), which traps on values out of its range.
+        guard let value = lenient(Double.self, forKey: key), value > 0,
+            let milliseconds = Int64(exactly: value.rounded(.towardZero))
+        else { return nil }
+        return Date(milliseconds: milliseconds)
     }
 
     /// An array that keeps the elements it can decode and drops the others.
@@ -75,9 +78,10 @@ struct LossyArray<Element: Decodable>: Decodable {
         while !container.isAtEnd {
             if let element = try? container.decode(Element.self) {
                 elements.append(element)
-            } else {
-                // A failed decode does not advance the container; skip the element.
-                _ = try? container.decode(Skipped.self)
+            } else if (try? container.decodeNil()) != true, (try? container.decode(Skipped.self)) == nil {
+                // A failed decode does not advance the container, and neither could skipping the
+                // element; stop rather than loop forever.
+                break
             }
         }
         self.elements = elements

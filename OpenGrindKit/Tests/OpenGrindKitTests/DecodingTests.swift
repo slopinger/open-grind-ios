@@ -188,6 +188,22 @@ struct DecodingTests {
         #expect(page.profile?.distance == nil, "the profile hides its distance")
     }
 
+    @Test func oddValuesAreDroppedInsteadOfCrashing() throws {
+        let page = try decode(
+            MessagePage.self,
+            #"""
+            {"messages":[null,7,"x",[1],
+              {"messageId":"1","conversationId":"1:2","senderId":2,"timestamp":5,"type":"Text","body":{"text":"hi"}}]}
+            """#)
+        #expect(page.messages.map(\.id) == ["1"])
+
+        let grid = try decode(
+            CascadePage.self,
+            #"{"items":[{"type":"full_profile_v1","data":{"profileId":1,"onlineUntil":1e20}}]}"#)
+        #expect(grid.profiles.map(\.id) == [1])
+        #expect(grid.profiles.first?.onlineUntil == nil, "a time beyond Int64 is no time")
+    }
+
     @Test func realtimeEventsDecode() throws {
         func event(_ type: String, _ payload: String) -> RealtimeEvent {
             RealtimeEvent.decode(
