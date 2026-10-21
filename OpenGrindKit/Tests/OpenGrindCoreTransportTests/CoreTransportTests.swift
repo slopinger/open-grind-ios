@@ -25,6 +25,14 @@ struct CoreTransportTests {
         }
     }
 
+    @Test func apiErrorCodesAreNotTakenForHTTPStatuses() {
+        #expect(
+            CoreTransport.error(.Api(code: 30001, message: "nope"))
+                == .server(status: 0, code: "30001", message: "nope"))
+        #expect(!CoreTransport.error(.Api(code: 30001, message: "nope")).isTransient)
+        #expect(CoreTransport.error(.Api(code: 503, message: "busy")).isTransient)
+    }
+
     @Test func resumedCredentialsAreReportedToTheHandler() async throws {
         let credentials =
             #"{"email":"a@example.com","profile_id":"42","auth_token":"t","kind":"Email"}"#

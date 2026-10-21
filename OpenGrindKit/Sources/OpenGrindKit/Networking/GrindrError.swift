@@ -24,7 +24,7 @@ public enum GrindrError: Error, Sendable, Hashable {
     case blocked
     /// The API refused the request. `code` is the `urn:gr:err:` type, the
     /// numeric code from the body, or a bare text code such as `CAS-4001`, when
-    /// there is one.
+    /// there is one. `status` is 0 when only the body's code is known.
     case server(status: Int, code: String?, message: String?)
     /// The profile or conversation is gone, hidden or blocked.
     case unavailable

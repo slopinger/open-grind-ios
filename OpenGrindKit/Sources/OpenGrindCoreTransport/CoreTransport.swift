@@ -98,7 +98,10 @@ public final class CoreTransport: GrindrTransport, @unchecked Sendable {
         case .Network: .offline
         case .Timeout: .timedOut
         case .Auth: .notSignedIn
-        case .Api(let code, let message): .server(status: Int(code), code: nil, message: message)
+        // grindr passes the body's error code, or the HTTP status when the body has none.
+        case .Api(let code, let message) where (100..<600).contains(code):
+            .server(status: Int(code), code: nil, message: message)
+        case .Api(let code, let message): .server(status: 0, code: String(code), message: message)
         case .Unauthorized: .unauthorized
         case .Banned(let scope, _, _, let reason): .banned(Self.scope(scope), reason: reason)
         case .RateLimited: .rateLimited
