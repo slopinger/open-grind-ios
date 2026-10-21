@@ -48,7 +48,6 @@ final class AppModel {
             return
         }
         await account.signOut()
-        await images.removeAll()
     }
 
     private func rebuild(isDemo: Bool) {
@@ -90,7 +89,9 @@ final class AppModel {
         transport.onDeviceRotated = { [keychain] device in keychain.device = device }
         let account = AccountController(
             transport: transport, credentials: keychain, location: location, preferences: DefaultsPreferenceStore())
-        return (account, ImagePipeline(transport: transport), nil)
+        let images = ImagePipeline(transport: transport)
+        account.onSignOut = { await images.removeAll() }
+        return (account, images, nil)
     }
 
     /// A demo avatar from DiceBear, which serves about ten PNGs a second and

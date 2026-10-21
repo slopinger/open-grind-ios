@@ -24,6 +24,9 @@ public final class AccountController {
     public var restriction: AccountRestriction?
 
     public let isDemo: Bool
+    /// Runs whenever the account is signed out, by you or by the server, e.g.
+    /// to delete what was cached for it.
+    @ObservationIgnored public var onSignOut: (@MainActor () async -> Void)?
     private let transport: any GrindrTransport
     private let credentials: any CredentialStore
     private let location: any LocationProviding
@@ -78,9 +81,7 @@ public final class AccountController {
 
     /// Signs out and forgets the account's session and preferences.
     public func signOut() async {
-        if let session { preferences?.saveBrowseFilters(nil, for: session.profileID) }
-        session?.stop()
-        state = .signedOut
+        endSession(nil)
         credentials.saveCredentials(nil)
         try? await transport.signOut()
     }
@@ -115,10 +116,13 @@ public final class AccountController {
         }
     }
 
-    private func endSession(_ reason: SignedOutReason) {
+    /// Leaves the session and forgets the account's preferences, whoever ended it.
+    private func endSession(_ reason: SignedOutReason?) {
         guard let session else { return }
+        preferences?.saveBrowseFilters(nil, for: session.profileID)
         session.stop()
         state = .signedOut
         signedOutReason = reason
+        if let onSignOut { Task { await onSignOut() } }
     }
 }

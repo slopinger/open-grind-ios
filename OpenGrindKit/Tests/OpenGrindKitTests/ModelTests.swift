@@ -251,8 +251,11 @@ struct ModelTests {
         let store = InMemoryCredentialStore(credentials: #"{"profile_id":"5","auth_token":"t"}"#)
         let account = AccountController(
             transport: transport, credentials: store, location: FixedLocation(geohash: "u33dc0cppvbz"))
+        var forgotten = false
+        account.onSignOut = { forgotten = true }
         transport.emit(.sessionEnded(banned: true, reason: "spam"))
         #expect(await eventually { account.session == nil })
         #expect(account.signedOutReason == .banned(reason: "spam"))
+        #expect(await eventually { forgotten }, "what was cached for the account is deleted")
     }
 }

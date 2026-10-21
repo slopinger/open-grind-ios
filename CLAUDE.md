@@ -74,8 +74,9 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   cascade with `nearbyGeoHash` moves your profile there, so exploring needs no location fix at all.
 - Genders/pronouns: `genders`/`pronouns` ID lists in the profile PATCH, max 3 each (upstream). Gender
   catalog: `displayGroup` 0 = not offered, `sortProfile`, `excludeOnProfileSelection`.
-- Filters persist per account (`PreferenceStore`, UserDefaults key `browseFilters.<profileID>`), cleared on
-  sign-out; the explored place is never persisted.
+- Filters persist per account (`PreferenceStore`, UserDefaults key `browseFilters.<profileID>`); the
+  explored place is never persisted. Every end of a session (sign-out, expiry, ban) clears them and
+  runs `AccountController.onSignOut`, which empties the image cache.
 - The UI tour also keeps `11-tags`, `12-explore`, `13-exploring`, `14-photos`, `15-photo-menu`,
   `16-photos-reordered`, `17-filter-wheel`, `18-edit-profile`, `19-age-wheel`.
 - Form conventions: every option list (single or multiple choice, tags) opens its own page; numbers
