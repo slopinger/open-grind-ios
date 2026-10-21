@@ -36,11 +36,7 @@ struct MultiSelectList<Attribute: ProfileAttribute>: View {
             Section {
                 ForEach(options) { option in
                     CheckRow(title: option.localizedName, isSelected: selection.contains(option)) {
-                        if selection.contains(option) {
-                            selection.remove(option)
-                        } else {
-                            selection.insert(option)
-                        }
+                        selection.toggle(option)
                     }
                 }
             }

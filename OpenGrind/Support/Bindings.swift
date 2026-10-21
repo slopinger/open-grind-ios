@@ -11,6 +11,24 @@ extension Binding {
     }
 }
 
+extension Binding {
+    /// Whether the set holds `element`, for a toggle that adds or removes it.
+    func contains<Element: Hashable>(_ element: Element) -> Binding<Bool> where Value == Set<Element> {
+        Binding<Bool> {
+            wrappedValue.contains(element)
+        } set: { isOn in
+            if isOn { wrappedValue.insert(element) } else { wrappedValue.remove(element) }
+        }
+    }
+}
+
+extension Set {
+    /// Adds `element`, or removes it if it is there already.
+    mutating func toggle(_ element: Element) {
+        if remove(element) == nil { insert(element) }
+    }
+}
+
 extension Binding where Value == String? {
     /// Whether the wheel `id` is the open one; a form keeps one open at a time.
     func isOpen(_ id: String) -> Binding<Bool> {

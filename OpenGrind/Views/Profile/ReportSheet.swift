@@ -28,7 +28,7 @@ struct ReportSheet: View {
                 }
                 Section("Where") {
                     ForEach(ReportLocation.allCases) { location in
-                        Toggle(location.localizedName, isOn: binding(for: location))
+                        Toggle(location.localizedName, isOn: $locations.contains(location))
                     }
                 }
                 Section {
@@ -59,14 +59,6 @@ struct ReportSheet: View {
             .disabled(isSending)
             .interactiveDismissDisabled(isSending)
             .failureAlert($failure)
-        }
-    }
-
-    private func binding(for location: ReportLocation) -> Binding<Bool> {
-        Binding {
-            locations.contains(location)
-        } set: { isOn in
-            if isOn { locations.insert(location) } else { locations.remove(location) }
         }
     }
 

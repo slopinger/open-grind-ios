@@ -74,8 +74,6 @@ struct TagPickerList: View {
                         Text("Shows profiles with any of the selected tags.")
                     }
                 }
-            }
-            if query.isEmpty {
                 ForEach(catalog.categories) { category in
                     Section(category.name) {
                         ForEach(category.tags) { row($0) }
@@ -96,11 +94,7 @@ struct TagPickerList: View {
         let isSelected = selection.contains(tag.key)
         let isFull = limit.map { selection.count >= $0 } ?? false
         return CheckRow(title: tag.text, isSelected: isSelected, isEnabled: isSelected || !isFull) {
-            if isSelected {
-                selection.remove(tag.key)
-            } else {
-                selection.insert(tag.key)
-            }
+            selection.toggle(tag.key)
         }
     }
 }
