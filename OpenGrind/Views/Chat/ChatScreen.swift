@@ -19,7 +19,7 @@ private struct ChatContent: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @FocusState private var isComposerFocused: Bool
-    @State private var viewer: ViewerItem?
+    @State private var viewer: OpenedPhoto?
     /// On screen, not covered by a pushed profile.
     @State private var isVisible = false
 
@@ -148,7 +148,7 @@ private struct ChatContent: View {
                                     || $0.message.date.timeIntervalSince(item.message.date) > 600
                             } ?? true,
                             showsReadReceipt: item.id == lastReadOutgoingID,
-                            openImage: { viewer = ViewerItem(url: $0, isViewOnce: $1) }
+                            openedPhoto: $viewer
                         )
                         .id(item.id)
                     }
@@ -180,12 +180,6 @@ private struct ChatContent: View {
             }
         }
     }
-}
-
-private struct ViewerItem: Identifiable {
-    var url: URL
-    var isViewOnce: Bool
-    var id: URL { url }
 }
 
 /// Three dots that pulse while the other side is typing.
