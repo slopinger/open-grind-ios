@@ -41,7 +41,6 @@ private struct ProfileContent: View {
     @State private var isConfirmingHide = false
     @State private var isReporting = false
     @State private var isShowingMutualTap = false
-    @State private var removalFailure: Failure?
     /// Blocked from the report sheet: leave once it closes.
     @State private var hasBlocked = false
 
@@ -115,7 +114,6 @@ private struct ProfileContent: View {
             Text("\(name) tapped you too. Say hi!")
         }
         .failureAlert($model.actionFailure)
-        .failureAlert($removalFailure)
         .sensoryFeedback(.success, trigger: model.sentTap) { _, new in new != nil }
         .sensoryFeedback(.selection, trigger: model.profile?.isFavorite)
         .onChange(of: model.isMutualTap) { _, isMutual in
@@ -244,7 +242,7 @@ private struct ProfileContent: View {
                 try await action()
                 dismiss()
             } catch {
-                removalFailure = Failure(error)
+                model.actionFailure = Failure(error)
             }
         }
     }
