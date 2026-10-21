@@ -178,7 +178,8 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
         }
 
         flag("onlineOnly", onlineOnly)
-        flag("favorites", favoritesOnly)
+        // Names as in the official app's CascadeRequest (26.16).
+        flag("isFavorites", favoritesOnly)
         flag("photoOnly", photosOnly)
         flag("faceOnly", facePhotosOnly)
         flag("notRecentlyChatted", notChattedToday)
@@ -187,14 +188,14 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
             items.append(URLQueryItem(name: "ageMax", value: String(ages.upperBound)))
         }
         if heights != Self.heightBounds {
-            items.append(URLQueryItem(name: "heightCmMin", value: number(heights.lowerBound)))
-            items.append(URLQueryItem(name: "heightCmMax", value: number(heights.upperBound)))
+            items.append(URLQueryItem(name: "heightInCmMin", value: number(heights.lowerBound)))
+            items.append(URLQueryItem(name: "heightInCmMax", value: number(heights.upperBound)))
         }
         if weights != Self.weightBounds {
             items.append(
-                URLQueryItem(name: "weightGramsMin", value: number(weights.lowerBound.rounded())))
+                URLQueryItem(name: "weightInGramsMin", value: number(weights.lowerBound.rounded())))
             items.append(
-                URLQueryItem(name: "weightGramsMax", value: number(weights.upperBound.rounded())))
+                URLQueryItem(name: "weightInGramsMax", value: number(weights.upperBound.rounded())))
         }
         list("sexualPositions", positions)
         list("lookingFor", lookingFor)
