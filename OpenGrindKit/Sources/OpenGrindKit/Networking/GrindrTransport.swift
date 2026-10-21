@@ -31,9 +31,10 @@ public struct APIRequest: Sendable, Hashable {
         self.isAuthenticated = isAuthenticated
     }
 
+    /// `path` is already percent-encoded: IDs in it are escaped where it is built.
     init(_ method: HTTPMethod, _ path: String, query: [URLQueryItem], body: Body = .empty) {
         var components = URLComponents()
-        components.path = path
+        components.percentEncodedPath = path
         components.queryItems = query.isEmpty ? nil : query
         self.init(method, components.string ?? path, body: body)
     }

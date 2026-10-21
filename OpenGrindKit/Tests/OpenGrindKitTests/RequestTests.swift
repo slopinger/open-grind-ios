@@ -33,6 +33,10 @@ struct RequestTests {
         let api = GrindrAPI(transport: transport)
         try await api.markRead("1:2", through: "x/../../v3/me?a=1#b")
         #expect(transport.requests.first?.path == "/v4/chat/conversation/1:2/read/x%2F..%2F..%2Fv3%2Fme%3Fa=1%23b")
+
+        // Escaped once, also where the request has a query.
+        _ = try? await api.messages(in: "x/y?z")
+        #expect(transport.requests.last?.path == "/v5/chat/conversation/x%2Fy%3Fz/message?profile=true")
     }
 
     @Test func filtersBecomeCascadeQueryItems() {
