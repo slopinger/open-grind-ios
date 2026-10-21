@@ -31,6 +31,8 @@ public final class ChatModel: Identifiable {
     public private(set) var items: [Item] = []
     public private(set) var state: LoadState = .idle
     public private(set) var isLoadingOlder = false
+    /// Loading earlier messages failed; they load again when asked.
+    public private(set) var didFailLoadingOlder = false
     public var hasOlderMessages: Bool { olderPageKey != nil }
     /// The other side has read everything up to this date.
     public private(set) var readByOtherUntil: Date?
@@ -116,6 +118,7 @@ public final class ChatModel: Identifiable {
     public func loadOlder() async {
         guard !isLoadingOlder, let key = olderPageKey else { return }
         isLoadingOlder = true
+        didFailLoadingOlder = false
         defer { isLoadingOlder = false }
         do {
             let page = try await api.messages(in: conversationID, pageKey: key)
@@ -124,7 +127,7 @@ public final class ChatModel: Identifiable {
             items.insert(contentsOf: older.map { Item(message: $0, delivery: .sent) }, at: 0)
             olderPageKey = page.nextPageKey
         } catch {
-            actionFailure = Failure(error)
+            didFailLoadingOlder = true
         }
     }
 
