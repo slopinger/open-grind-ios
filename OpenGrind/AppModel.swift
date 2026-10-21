@@ -76,14 +76,19 @@ final class AppModel {
         do {
             transport = try CoreTransport(deviceJSON: device, credentials: keychain.loadCredentials())
         } catch {
-            // Stored data this version cannot read: start over with a new device.
+            // Stored data this version cannot read. Sign out, but keep the device unless it is
+            // the problem: a new device looks riskier to Grindr's bot protection.
             keychain.saveCredentials(nil)
-            keychain.device = CoreTransport.makeDevice()
-            do {
-                transport = try CoreTransport(deviceJSON: keychain.device ?? device, credentials: nil)
-            } catch {
-                let demo = makeAccount(isDemo: true, keychain: keychain, location: location)
-                return (demo.account, demo.images, Failure(error))
+            if let signedOut = try? CoreTransport(deviceJSON: device, credentials: nil) {
+                transport = signedOut
+            } else {
+                keychain.device = CoreTransport.makeDevice()
+                do {
+                    transport = try CoreTransport(deviceJSON: keychain.device ?? device, credentials: nil)
+                } catch {
+                    let demo = makeAccount(isDemo: true, keychain: keychain, location: location)
+                    return (demo.account, demo.images, Failure(error))
+                }
             }
         }
         transport.onDeviceRotated = { [keychain] device in keychain.device = device }
