@@ -1,6 +1,6 @@
 import Foundation
 
-/// Why a profile is reported (`POST /v4/flags/{id}`).
+/// Why a profile is reported (`POST /v3.1/flags/{id}`).
 public enum ReportReason: String, CaseIterable, Identifiable, Sendable {
     case spam = "SPAM"
     case harassment = "HARASSMENT_BULLYING"

@@ -99,7 +99,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
             return try await cascade(query)
         }
         if route.matches(.put, "v4/location") || route.matches(.post, "v5/views/*")
-            || route.matches(.post, "v4/flags/*")
+            || route.matches(.post, "v3.1/flags/*")
         {
             return .ok
         }

@@ -152,7 +152,8 @@ public struct GrindrAPI: Sendable {
     }
 
     public func report(_ id: ProfileID, _ report: ProfileReport) async throws {
-        try await perform(.json(.post, "/v4/flags/\(id)", report.requestBody))
+        // The official app's report without a captcha token (v5 is the same with one).
+        try await perform(.json(.post, "/v3.1/flags/\(id)", report.requestBody))
     }
 
     // MARK: Interest
