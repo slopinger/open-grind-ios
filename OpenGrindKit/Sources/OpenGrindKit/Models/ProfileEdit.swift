@@ -78,17 +78,13 @@ public struct ProfileEdit: Hashable, Sendable {
     /// if nothing changed.
     public func patch(from original: ProfileEdit) -> JSONValue? {
         var fields: [String: JSONValue] = [:]
-        func text(_ value: String) -> JSONValue {
-            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? .null : .string(trimmed)
-        }
         func set<T: ProfileAttribute>(_ values: Set<T>) -> JSONValue {
             .ints(values.map(\.rawValue).sorted())
         }
         func one<T: ProfileAttribute>(_ value: T?) -> JSONValue { .optional(value?.rawValue) }
 
-        if displayName != original.displayName { fields["displayName"] = text(displayName) }
-        if aboutMe != original.aboutMe { fields["aboutMe"] = text(aboutMe) }
+        if displayName != original.displayName { fields["displayName"] = .optional(displayName.nonBlank) }
+        if aboutMe != original.aboutMe { fields["aboutMe"] = .optional(aboutMe.nonBlank) }
         if age != original.age { fields["age"] = .optional(age) }
         if showsAge != original.showsAge { fields["showAge"] = .bool(showsAge) }
         if showsDistance != original.showsDistance { fields["showDistance"] = .bool(showsDistance) }
@@ -122,10 +118,8 @@ public struct ProfileEdit: Hashable, Sendable {
     /// sends the profile again.
     public func applied(to profile: Profile) -> Profile {
         var profile = profile
-        let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let about = aboutMe.trimmingCharacters(in: .whitespacesAndNewlines)
-        profile.displayName = name.isEmpty ? nil : name
-        profile.aboutMe = about.isEmpty ? nil : about
+        profile.displayName = displayName.nonBlank
+        profile.aboutMe = aboutMe.nonBlank
         profile.age = age
         profile.showsAge = showsAge
         profile.showsDistance = showsDistance

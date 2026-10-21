@@ -71,7 +71,7 @@ public final class ChatModel: Identifiable {
     }
 
     public var canSendDraft: Bool {
-        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        draft.nonBlank != nil
     }
 
     // MARK: Lifecycle
@@ -131,8 +131,7 @@ public final class ChatModel: Identifiable {
     // MARK: Sending
 
     public func sendDraft() async {
-        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        guard let text = draft.nonBlank else { return }
         draft = ""
         await send(.text(text))
     }
