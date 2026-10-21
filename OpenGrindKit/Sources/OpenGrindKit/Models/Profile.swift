@@ -176,6 +176,7 @@ extension Profile: Decodable {
         displayName = container.lenient(String.self, forKey: .displayName)
         aboutMe = container.lenient(String.self, forKey: .aboutMe)
         age = container.lenient(Int.self, forKey: .age)
+        // Missing means hidden, as in the official app's profile model (26.16 ProfileDto).
         showsAge = container.flag(forKey: .showAge)
         distance = container.lenient(Double.self, forKey: .distance)
         isDistanceApproximate = container.flag(forKey: .approximateDistance)
@@ -221,7 +222,8 @@ extension Profile: Decodable {
         isVisiting = container.flag(forKey: .isVisiting)
         isRoaming = container.flag(forKey: .isRoaming)
         unreadCount = container.lenient(Int.self, forKey: .unreadCount) ?? 0
-        // Missing means shown: the server leaves out default values.
+        // Missing means shown: the server leaves out default values. Unlike age and
+        // distance, the official app's profile model has no such flags to compare with.
         showsTribes = container.lenient(Bool.self, forKey: .showTribes) ?? true
         showsPosition = container.lenient(Bool.self, forKey: .showPosition) ?? true
     }
