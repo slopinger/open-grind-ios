@@ -175,6 +175,16 @@ struct ModelTests {
         #expect(inbox.actionFailure == .grindr(.offline))
     }
 
+    @Test func interestOnScreenIsNotUnseen() {
+        let interest = session(FakeTransport()).interest
+        interest.handle(.profileViewed(by: 2, photoHash: nil, totalViews: nil))
+        #expect(interest.unseenCount == 1)
+        interest.isOnScreen = true
+        #expect(interest.unseenCount == 0)
+        interest.handle(.profileViewed(by: 3, photoHash: nil, totalViews: nil))
+        #expect(interest.unseenCount == 0, "a view that arrives while the tab is open is seen")
+    }
+
     // MARK: Browse
 
     @Test func browseReportsLocationProblems() async {

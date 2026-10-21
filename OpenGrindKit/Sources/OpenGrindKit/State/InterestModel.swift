@@ -11,6 +11,10 @@ public final class InterestModel {
     public private(set) var viewsState: LoadState = .idle
     /// New taps and views since the Interest tab was last on screen.
     public private(set) var unseenCount = 0
+    /// Whether the Interest tab is on screen; nothing that arrives meanwhile is unseen.
+    public var isOnScreen = false {
+        didSet { if isOnScreen { unseenCount = 0 } }
+    }
 
     @ObservationIgnored private let api: GrindrAPI
     @ObservationIgnored private let me: ProfileID
@@ -59,10 +63,6 @@ public final class InterestModel {
         }
     }
 
-    public func markSeen() {
-        unseenCount = 0
-    }
-
     func remove(_ profileID: ProfileID) {
         taps.removeAll { $0.profileID == profileID }
         views.viewers.removeAll { $0.profileID == profileID }
@@ -82,9 +82,9 @@ public final class InterestModel {
         case .tapReceived(let tap) where tap.profileID != me:
             taps.removeAll { $0.profileID == tap.profileID }
             taps.insert(tap, at: 0)
-            unseenCount += 1
+            if !isOnScreen { unseenCount += 1 }
         case .profileViewed(let viewer, _, _) where viewer != me:
-            unseenCount += 1
+            if !isOnScreen { unseenCount += 1 }
             scheduleViewsRefresh()
         default:
             break
