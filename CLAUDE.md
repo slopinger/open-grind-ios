@@ -72,7 +72,14 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   **only** `exploreGeoHash`. The official app (26.16, `SearchParams`) refuses nearby and explore geohashes
   together; sending both got the bare text `CAS-4001` (still mapped to `requiresSubscription`). Every
   cascade with `nearbyGeoHash` moves your profile there, so exploring needs no location fix at all.
-- Genders/pronouns: `genders`/`pronouns` ID lists in the profile PATCH, max 3 each (upstream). Gender
+- Requests match the official Android app (26.16, checked 2026-10-21 against the decompiled APK; see the
+  memory note on decompiling): Edit Profile saves the whole profile with `PUT /v3.1/me/profile`
+  (`ProfileEdit.update(of:)`, carrying over tribesImInto, socialNetworks, approximateDistance), reports go to
+  `POST /v3.1/flags/{id}`, cascade filters use `isFavorites`, `heightInCmMin/Max`, `weightInGramsMin/Max`,
+  and sign-out keeps the device identity. Check new requests the same way before adding them. The app sends
+  no Sift or reCAPTCHA signals (neither does upstream; its reCAPTCHA helper is an Android add-on), and a
+  user's account was banned on 2026-10-21 while using the app; the cause is unknown.
+- Genders/pronouns: `genders`/`pronouns` ID lists in the profile update, max 3 each (upstream). Gender
   catalog: `displayGroup` 0 = not offered, `sortProfile`, `excludeOnProfileSelection`.
 - Filters persist per account (`PreferenceStore`, UserDefaults key `browseFilters.<profileID>`); the
   explored place is never persisted. Every end of a session (sign-out, expiry, ban) clears them and
@@ -82,7 +89,7 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
 - Form conventions: every option list (single or multiple choice, tags) opens its own page; numbers
   (age, height, weight, filter ranges) use `WheelPickerRow`, which opens a wheel below the row, one at
   a time per form. Photos are edited from Edit Profile and save immediately.
-- Own tags: `profileTags` keys in the profile PATCH (max 10). Profiles carry keys or texts; `MeModel`
+- Own tags: `profileTags` keys in the profile update (max 10). Profiles carry keys or texts; `MeModel`
   turns yours into keys when it loads (`ProfileTagCatalog.key(for:)`), so `ProfileEdit.tags` are plain keys.
   Genders, pronouns and tags live in `AccountSession.catalogs` (`CatalogModel`), loaded with your profile.
 - Large titles: no custom top bars as `safeAreaInset` with `.background(.bar)` (it ignores all safe area
