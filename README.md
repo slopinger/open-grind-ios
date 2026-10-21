@@ -34,7 +34,8 @@ Everyone shown is made up; the avatars are DiceBear's Notionists by Zoish (CC0).
   to refresh and endless scrolling. **Explore** another place by searching for a city or moving a
   pin on a map; your own profile stays where you are (moving it is Grindr's paid Roam, which the
   app doesn't do).
-- **Profiles**: photo pager with a zoomable full-screen viewer, every profile detail, taps,
+- **Profiles**: swipe sideways from one grid profile to the next and up and down through their
+  photos, with a zoomable full-screen viewer; every profile detail, taps,
   favorites, and hide, block and report.
 - **Messages**: the inbox with search, filters, pin, mute and delete; chats with live updates,
   typing and read indicators, photos, stickers, GIFs, locations, hearts, unsend and retry.

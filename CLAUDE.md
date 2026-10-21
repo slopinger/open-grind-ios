@@ -99,6 +99,10 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
 - Own tags: `profileTags` keys in the profile update (max 10). Profiles carry keys or texts; `MeModel`
   turns yours into keys when it loads (`ProfileTagCatalog.key(for:)`), so `ProfileEdit.tags` are plain keys.
   Genders, pronouns and tags live in `AccountSession.catalogs` (`CatalogModel`), loaded with your profile.
+- Profiles from the grid open in `ProfilePager` (horizontal paging over `browse.profiles`, zoom transition
+  back to the tile on screen); only the current page (`isCurrentPage`) loads, records the view and puts its
+  name and menu in the navigation bar. Profile photos page vertically. Never hide the tab bar on a profile:
+  hiding it got stuck after the zoom transition (iOS 26), and the tab bar doesn't minimize on scroll either.
 - Large titles: no custom top bars as `safeAreaInset` with `.background(.bar)` (it ignores all safe area
   edges by default and covers the large title under iOS 26+'s transparent navigation bar). The Browse
   explore/filter row is the first view of the grid's content instead.

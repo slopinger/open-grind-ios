@@ -37,8 +37,7 @@ struct BrowseView: View {
                 }
                 .routeDestinations()
                 .navigationDestination(for: GridProfile.self) { tile in
-                    ProfileScreen(profileID: tile.id, preview: tile)
-                        .navigationTransition(.zoom(sourceID: tile.id, in: transition))
+                    ProfilePager(start: tile, transition: transition)
                 }
         }
         .task { await browse.loadIfNeeded() }

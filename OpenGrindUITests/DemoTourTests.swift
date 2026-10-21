@@ -65,11 +65,14 @@ final class DemoTourTests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Nearby"].waitForExistence(timeout: 10))
 
         tile.tap()
-        let message = app.buttons["Message"]
+        // The first tile's page comes first; the next profile's page may be loaded beside it.
+        let message = app.buttons.matching(identifier: "Message").firstMatch
         XCTAssertTrue(message.waitForExistence(timeout: 10))
         sleep(2)
         snapshot(app, "05-profile")
-        app.swipeUp()
+        // Below the photos, which page up and down themselves.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72))
+            .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)))
         snapshot(app, "06-profile-details")
 
         message.tap()
