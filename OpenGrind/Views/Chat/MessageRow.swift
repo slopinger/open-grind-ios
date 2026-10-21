@@ -10,7 +10,7 @@ struct MessageRow: View {
     let startsGroup: Bool
     let endsGroup: Bool
     let showsReadReceipt: Bool
-    let openImage: (URL) -> Void
+    let openImage: (_ url: URL, _ isViewOnce: Bool) -> Void
 
     @State private var isConfirmingUnsend = false
 
@@ -148,7 +148,7 @@ struct MessageRow: View {
 private struct MessageBubble: View {
     let item: ChatModel.Item
     let isOutgoing: Bool
-    let openImage: (URL) -> Void
+    let openImage: (_ url: URL, _ isViewOnce: Bool) -> Void
 
     @Environment(\.openURL) private var openURL
 
@@ -188,7 +188,7 @@ private struct MessageBubble: View {
         case .expiringImage(let url):
             if let url {
                 Button {
-                    openImage(url)
+                    openImage(url, true)
                 } label: {
                     unsupportedBubble("Expiring Photo", systemImage: "timer", detail: "Tap to view")
                 }
@@ -234,7 +234,7 @@ private struct MessageBubble: View {
 
     private func photo(url: URL, width: Int?, height: Int?, opensViewer: Bool = true) -> some View {
         Button {
-            if opensViewer { openImage(url) }
+            if opensViewer { openImage(url, false) }
         } label: {
             RemoteImage(url: url, pointSize: Self.pointSize(width, height))
                 .frame(width: 220, height: 220 / Self.ratio(width, height))

@@ -58,7 +58,7 @@ private struct ChatContent: View {
                 }
             }
             .fullScreenCover(item: $viewer) { item in
-                PhotoViewer(urls: [item.url], selection: 0)
+                PhotoViewer(urls: [item.url], selection: 0, storesOnDisk: !item.isViewOnce)
             }
             .failureAlert($chat.actionFailure)
     }
@@ -147,7 +147,7 @@ private struct ChatContent: View {
                                     || $0.message.date.timeIntervalSince(item.message.date) > 600
                             } ?? true,
                             showsReadReceipt: item.id == lastReadOutgoingID,
-                            openImage: { viewer = ViewerItem(url: $0) }
+                            openImage: { viewer = ViewerItem(url: $0, isViewOnce: $1) }
                         )
                         .id(item.id)
                     }
@@ -183,6 +183,7 @@ private struct ChatContent: View {
 
 private struct ViewerItem: Identifiable {
     var url: URL
+    var isViewOnce: Bool
     var id: URL { url }
 }
 

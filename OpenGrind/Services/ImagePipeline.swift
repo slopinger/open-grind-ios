@@ -15,7 +15,9 @@ actor ImagePipeline {
     private let transport: any GrindrTransport
     /// NSCache is thread-safe, so ``cachedImage(at:maxPixelSize:)`` reads it without the actor.
     private nonisolated(unsafe) let memory = NSCache<NSString, UIImage>()
-    private var inFlight: [String: Task<UIImage, any Error>] = [:]
+    private var inFlight: [String: Task<(image: UIImage, download: Data?), any Error>] = [:]
+    /// Counts ``removeAll()`` calls, so downloads started before one aren't written afterwards.
+    private var generation = 0
     private let directory: URL
 
     init(transport: any GrindrTransport) {
@@ -34,36 +36,43 @@ actor ImagePipeline {
     }
 
     /// The image at `url`, scaled so its longer side is at most `maxPixelSize` pixels.
-    func image(at url: URL, maxPixelSize: Int) async throws -> UIImage {
+    ///
+    /// With `storesOnDisk` false, e.g. for view-once photos, the image is kept
+    /// nowhere: not on disk and not in memory.
+    func image(at url: URL, maxPixelSize: Int, storesOnDisk: Bool = true) async throws -> UIImage {
         let fileName = Self.cacheKey(url)
         let key = Self.memoryKey(fileName, maxPixelSize)
-        if let image = memory.object(forKey: key) { return image }
-        if let task = inFlight[key as String] { return try await task.value }
+        if storesOnDisk, let image = memory.object(forKey: key) { return image }
+        if storesOnDisk, let task = inFlight[key as String] { return try await task.value.image }
 
         let file = directory.appending(path: fileName)
         let transport = transport
-        let task = Task.detached(priority: .userInitiated) { () throws -> UIImage in
-            let data: Data
-            if let cached = try? Data(contentsOf: file) {
-                data = cached
-            } else {
+        let task = Task.detached(priority: .userInitiated) { () throws -> (image: UIImage, download: Data?) in
+            let cached = storesOnDisk ? try? Data(contentsOf: file) : nil
+            var download: Data?
+            if cached == nil {
                 let media = try await transport.fetchMedia(at: url, maxBytes: Self.maxDownloadBytes)
                 guard (200..<300).contains(media.status) else {
                     throw GrindrError.server(status: media.status, code: nil, message: nil)
                 }
-                data = media.data
-                try? data.write(
-                    to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+                download = media.data
             }
-            guard let image = Self.downsample(data, maxPixelSize: maxPixelSize) else {
-                try? FileManager.default.removeItem(at: file)
+            guard let data = cached ?? download, let image = Self.downsample(data, maxPixelSize: maxPixelSize)
+            else {
+                if cached != nil { try? FileManager.default.removeItem(at: file) }
                 throw GrindrError.invalidResponse("not an image")
             }
-            return image
+            return (image, download)
         }
+        guard storesOnDisk else { return try await task.value.image }
+
         inFlight[key as String] = task
-        defer { inFlight[key as String] = nil }
-        let image = try await task.value
+        defer { if inFlight[key as String] == task { inFlight[key as String] = nil } }
+        let generation = generation
+        let (image, download) = try await task.value
+        // Written here on the actor, so a sign-out in the meantime can't be undone by it.
+        guard generation == self.generation else { return image }
+        try? download?.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         memory.setObject(
             image, forKey: key, cost: Int(image.size.width * image.size.height * image.scale * 4))
         return image
@@ -114,6 +123,8 @@ actor ImagePipeline {
 
     /// Deletes every cached file, e.g. on sign-out.
     func removeAll() {
+        generation += 1
+        for task in inFlight.values { task.cancel() }
         memory.removeAllObjects()
         try? FileManager.default.removeItem(at: directory)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

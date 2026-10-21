@@ -5,13 +5,15 @@ import SwiftUI
 struct PhotoViewer: View {
     let urls: [URL]
     @State var selection: Int
+    /// False for view-once photos.
+    var storesOnDisk = true
 
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         TabView(selection: $selection) {
             ForEach(urls.indices, id: \.self) { index in
-                ZoomablePhoto(url: urls[index])
+                ZoomablePhoto(url: urls[index], storesOnDisk: storesOnDisk)
                     .tag(index)
             }
         }
@@ -39,6 +41,7 @@ struct PhotoViewer: View {
 
 private struct ZoomablePhoto: View {
     let url: URL
+    let storesOnDisk: Bool
 
     @State private var scale: CGFloat = 1
     @State private var committedScale: CGFloat = 1
@@ -46,7 +49,7 @@ private struct ZoomablePhoto: View {
     @State private var committedOffset: CGSize = .zero
 
     var body: some View {
-        RemoteImage(url: url, pointSize: 1024, contentMode: .fit)
+        RemoteImage(url: url, pointSize: 1024, contentMode: .fit, storesOnDisk: storesOnDisk)
             .scaleEffect(scale)
             .offset(offset)
             .gesture(

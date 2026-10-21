@@ -8,6 +8,8 @@ struct RemoteImage: View {
     /// The longest side, in points, the image is shown at.
     var pointSize: CGFloat = 200
     var contentMode: ContentMode = .fill
+    /// False for view-once photos, which must not be kept anywhere.
+    var storesOnDisk = true
 
     @Environment(\.imagePipeline) private var pipeline
     @Environment(\.displayScale) private var displayScale
@@ -19,8 +21,14 @@ struct RemoteImage: View {
 
     var body: some View {
         // Already decoded images show at once, e.g. when scrolling back to them.
-        let shown =
-            loadedURL == url ? image : url.flatMap { pipeline?.cachedImage(at: $0, maxPixelSize: pixels) }
+        let shown: UIImage? =
+            if loadedURL == url {
+                image
+            } else if storesOnDisk {
+                url.flatMap { pipeline?.cachedImage(at: $0, maxPixelSize: pixels) }
+            } else {
+                nil
+            }
         ZStack {
             if let shown {
                 Image(uiImage: shown)
@@ -38,7 +46,7 @@ struct RemoteImage: View {
                 loadedURL = nil
                 return
             }
-            if let loaded = try? await pipeline.image(at: url, maxPixelSize: pixels) {
+            if let loaded = try? await pipeline.image(at: url, maxPixelSize: pixels, storesOnDisk: storesOnDisk) {
                 image = loaded
                 loadedURL = url
             }
