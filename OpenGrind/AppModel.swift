@@ -62,9 +62,7 @@ final class AppModel {
         isDemo: Bool, keychain: KeychainStore, location: LocationService
     ) -> (account: AccountController, images: ImagePipeline, failure: Failure?) {
         if isDemo {
-            let transport = DemoTransport(loadImage: { url in
-                try await URLSession.shared.data(from: url).0
-            })
+            let transport = DemoTransport(loadImage: loadDemoAvatar)
             let account = AccountController(
                 transport: transport,
                 credentials: InMemoryCredentialStore(credentials: DemoTransport.credentials),
@@ -93,5 +91,17 @@ final class AppModel {
         let account = AccountController(
             transport: transport, credentials: keychain, location: location, preferences: DefaultsPreferenceStore())
         return (account, ImagePipeline(transport: transport), nil)
+    }
+
+    /// A demo avatar from DiceBear, which serves about ten PNGs a second and
+    /// answers the rest with 429 (no Retry-After), as a full grid would get.
+    @concurrent
+    nonisolated private static func loadDemoAvatar(_ url: URL) async throws -> Data {
+        for attempt in 1...5 {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard (response as? HTTPURLResponse)?.statusCode == 429 else { return data }
+            try await Task.sleep(for: .milliseconds(400 * attempt))
+        }
+        throw URLError(.resourceUnavailable)
     }
 }
