@@ -190,7 +190,7 @@ extension Message: Decodable {
 }
 
 /// The profile shown at the top of a conversation.
-public struct ConversationProfile: Hashable, Sendable, Decodable {
+public struct ConversationProfile: Hashable, Sendable, Decodable, OnlinePresence {
     public var id: ProfileID
     public var name: String?
     public var photoHash: String?

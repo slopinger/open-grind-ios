@@ -84,10 +84,7 @@ private struct ChatContent: View {
             HStack(spacing: 8) {
                 Avatar(
                     photoHash: chat.profile?.photoHash ?? conversation?.participant?.photoHash, size: 30,
-                    isOnline: (chat.profile?.onlineUntil ?? conversation?.participant?.onlineUntil).map {
-                        $0 > .now
-                    }
-                        ?? false)
+                    isOnline: chat.profile?.isOnline() ?? conversation?.participant?.isOnline() ?? false)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(name)
                         .font(.headline)
