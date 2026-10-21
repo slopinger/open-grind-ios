@@ -18,6 +18,16 @@ public enum RealtimeEvent: Sendable, Hashable {
     /// An event this version does not handle.
     case other(type: String)
 
+    /// The conversations a chat screen should hear about this event for.
+    var conversationIDs: [String] {
+        switch self {
+        case .message(let message): [message.conversationID]
+        case .conversationRead(let id, _, _), .typing(let id, _, _): [id]
+        case .conversationsDeleted(let ids): ids
+        default: []
+        }
+    }
+
     /// Decodes an event from its `type` and the whole event's JSON.
     public static func decode(type: String, json: Data) -> RealtimeEvent {
         decodeKnown(type: type, json: json) ?? .other(type: type)
