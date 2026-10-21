@@ -7,6 +7,7 @@ struct BrowseView: View {
     @Environment(AppModel.self) private var app
     @State private var isShowingFilters = false
     @State private var isShowingExplore = false
+    @Namespace private var transition
 
     private var browse: BrowseModel { session.browse }
     /// The place you appear at instead of where you are, if any.
@@ -35,10 +36,9 @@ struct BrowseView: View {
                     }
                 }
                 .routeDestinations()
-                // A plain push: on iOS 26 an interrupted zoom transition back to the grid can leave
-                // the tab bar hidden for good.
                 .navigationDestination(for: GridProfile.self) { tile in
                     ProfileScreen(profileID: tile.id, preview: tile)
+                        .navigationTransition(.zoom(sourceID: tile.id, in: transition))
                 }
         }
         .task { await browse.loadIfNeeded() }
@@ -89,6 +89,7 @@ struct BrowseView: View {
                 ForEach(browse.profiles) { profile in
                     NavigationLink(value: profile) {
                         ProfileTile(profile: profile, unreadCount: browse.unreadCount(of: profile))
+                            .matchedTransitionSource(id: profile.id, in: transition)
                     }
                     .buttonStyle(.plain)
                     .task { await browse.loadMoreIfNeeded(after: profile) }
