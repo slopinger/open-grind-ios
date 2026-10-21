@@ -57,7 +57,7 @@ extension Tap: Decodable {
         isMutual = container.flag(forKey: .isMutual)
         onlineUntil = container.timestamp(forKey: .onlineUntil)
         isFavorite = container.flag(forKey: .isFavorite)
-        isViewable = container.lenient(Bool.self, forKey: .isViewable) ?? true
+        isViewable = container.flag(forKey: .isViewable, missing: true)
     }
 }
 

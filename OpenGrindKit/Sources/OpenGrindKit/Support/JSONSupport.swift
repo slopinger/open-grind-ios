@@ -6,7 +6,7 @@ public typealias ProfileID = Int
 
 extension Date {
     /// A date from the API's Unix timestamps in milliseconds.
-    init(milliseconds: Int64) {
+    public init(milliseconds: Int64) {
         self.init(timeIntervalSince1970: TimeInterval(milliseconds) / 1000)
     }
 
@@ -60,10 +60,10 @@ extension KeyedDecodingContainer {
         lenient(LossyArray<Element>.self, forKey: key)?.elements ?? []
     }
 
-    /// A `Bool` that defaults to `false` when missing or `null`, as the server
-    /// leaves out default values.
-    func flag(forKey key: Key) -> Bool {
-        lenient(Bool.self, forKey: key) ?? false
+    /// A `Bool` that is `missing` (normally false) when missing or `null`, as the
+    /// server leaves out default values.
+    func flag(forKey key: Key, missing: Bool = false) -> Bool {
+        lenient(Bool.self, forKey: key) ?? missing
     }
 }
 

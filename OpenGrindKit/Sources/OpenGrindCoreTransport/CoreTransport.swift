@@ -86,7 +86,7 @@ public final class CoreTransport: GrindrTransport, @unchecked Sendable {
         case .ageVerification(let region): .ageVerification(region: region)
         case .timedBan(let expiresAt, let reason):
             .temporaryBan(
-                until: expiresAt.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) },
+                until: expiresAt.map { Date(milliseconds: $0) },
                 reason: reason)
         case .trustVendorRejected: .rejectedByTrustVendor
         case .other(let value): .other(value)

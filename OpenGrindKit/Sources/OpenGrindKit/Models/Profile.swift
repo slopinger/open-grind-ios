@@ -202,18 +202,19 @@ extension Profile: Decodable {
         ethnicity = Ethnicity.known(container.lenient(Int.self, forKey: .ethnicity))
         relationshipStatus = RelationshipStatus.known(
             container.lenient(Int.self, forKey: .relationshipStatus))
-        tribes = Tribe.known(container.lenient([Int].self, forKey: .grindrTribes))
-        tribesImInto = Tribe.known(container.lenient([Int].self, forKey: .tribesImInto))
-        lookingFor = LookingFor.known(container.lenient([Int].self, forKey: .lookingFor))
-        meetAt = MeetAt.known(container.lenient([Int].self, forKey: .meetAt))
+        // ID lists drop single bad elements instead of losing the whole list.
+        tribes = Tribe.known(container.lossyArray(of: Int.self, forKey: .grindrTribes))
+        tribesImInto = Tribe.known(container.lossyArray(of: Int.self, forKey: .tribesImInto))
+        lookingFor = LookingFor.known(container.lossyArray(of: Int.self, forKey: .lookingFor))
+        meetAt = MeetAt.known(container.lossyArray(of: Int.self, forKey: .meetAt))
         acceptsNSFWPics = AcceptsNSFWPics.known(container.lenient(Int.self, forKey: .nsfw))
         hivStatus = HIVStatus.known(container.lenient(Int.self, forKey: .hivStatus))
         lastTested = container.timestamp(forKey: .lastTestedDate)
-        sexualHealth = SexualHealthPractice.known(container.lenient([Int].self, forKey: .sexualHealth))
-        vaccines = Vaccine.known(container.lenient([Int].self, forKey: .vaccines))
-        genderIDs = container.lenient([Int].self, forKey: .genders) ?? []
-        pronounIDs = container.lenient([Int].self, forKey: .pronouns) ?? []
-        tags = container.lenient([String].self, forKey: .profileTags) ?? []
+        sexualHealth = SexualHealthPractice.known(container.lossyArray(of: Int.self, forKey: .sexualHealth))
+        vaccines = Vaccine.known(container.lossyArray(of: Int.self, forKey: .vaccines))
+        genderIDs = container.lossyArray(of: Int.self, forKey: .genders)
+        pronounIDs = container.lossyArray(of: Int.self, forKey: .pronouns)
+        tags = container.lossyArray(of: String.self, forKey: .profileTags)
         instagram = container.lenient(SocialNetworks.self, forKey: .socialNetworks)?.instagram?.userId
         isFavorite = container.flag(forKey: .isFavorite)
         receivedTap = TapType.known(container.lenient(Int.self, forKey: .tapType))
@@ -224,8 +225,8 @@ extension Profile: Decodable {
         unreadCount = container.lenient(Int.self, forKey: .unreadCount) ?? 0
         // Missing means shown: the server leaves out default values. Unlike age and
         // distance, the official app's profile model has no such flags to compare with.
-        showsTribes = container.lenient(Bool.self, forKey: .showTribes) ?? true
-        showsPosition = container.lenient(Bool.self, forKey: .showPosition) ?? true
+        showsTribes = container.flag(forKey: .showTribes, missing: true)
+        showsPosition = container.flag(forKey: .showPosition, missing: true)
     }
 
     /// Grindr answers a blocked or deleted profile with a stub whose display
@@ -298,7 +299,7 @@ public struct Gender: Identifiable, Hashable, Sendable, Decodable {
         name = try container.decode(String.self, forKey: .gender)
         displayGroup = container.lenient(Int.self, forKey: .displayGroup)
         profileSortOrder = container.lenient(Int.self, forKey: .sortProfile)
-        excludedOnProfile = container.lenient([Int].self, forKey: .excludeOnProfileSelection) ?? []
+        excludedOnProfile = container.lossyArray(of: Int.self, forKey: .excludeOnProfileSelection)
     }
 
     /// Whether the gender can be put on a profile.

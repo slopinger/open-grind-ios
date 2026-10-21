@@ -218,7 +218,7 @@ public struct ConversationProfile: Hashable, Sendable, Decodable, OnlinePresence
         name = container.lenient(String.self, forKey: .name)
         photoHash = container.lenient(String.self, forKey: .mediaHash)
         onlineUntil = container.timestamp(forKey: .onlineUntil)
-        let showsDistance = container.lenient(Bool.self, forKey: .showDistance) ?? true
+        let showsDistance = container.flag(forKey: .showDistance, missing: true)
         distance = showsDistance ? container.lenient(Double.self, forKey: .distance) : nil
     }
 }

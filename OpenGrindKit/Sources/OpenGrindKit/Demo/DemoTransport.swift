@@ -183,7 +183,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
                     blocked.map {
                         .object([
                             "profileId": .int($0.id),
-                            "blockedTime": .number(Double($0.blockedAt?.milliseconds ?? 0)),
+                            "blockedTime": .timestamp($0.blockedAt),
                         ])
                     })
             ])
@@ -354,7 +354,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
                                     "position": .optional(profile.position?.rawValue),
                                 ])
                             ]),
-                            "lastActivityTimestamp": .number(Double(last?.date.milliseconds ?? 0)),
+                            "lastActivityTimestamp": .timestamp(last?.date),
                             "unreadCount": .int(thread.unread),
                             "preview": last.map {
                                 .object([
@@ -385,7 +385,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
             pageKey.flatMap { key in newestFirst.firstIndex { $0.id == key }.map { $0 + 1 } } ?? 0
         let page = newestFirst.dropFirst(start).prefix(30)
         return try .json([
-            "lastReadTimestamp": .number(Double(Date.now.addingTimeInterval(-120).milliseconds)),
+            "lastReadTimestamp": .timestamp(Date.now.addingTimeInterval(-120)),
             "messages": .array(page.map(Self.encode)),
             "profile": .object([
                 "profileId": .int(profile.id), "name": .optional(profile.displayName),

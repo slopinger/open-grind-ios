@@ -5,7 +5,7 @@ import Foundation
 public struct ProfileEdit: Hashable, Sendable {
     public static let maxDisplayNameLength = 15
     public static let maxAboutMeLength = 255
-    public static let ageRange = 18...99
+    public static let ageRange = BrowseFilters.ageBounds
     public static let maxTags = 10
     public static let maxGenders = 3
     public static let maxPronouns = 3
