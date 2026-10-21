@@ -181,6 +181,24 @@ struct DemoTests {
         #expect(me.actionFailure == nil)
     }
 
+    @Test func photoChangesDuringAnUploadAreKept() async throws {
+        let session = try await signedIn()
+        let me = session.me
+        await me.loadIfNeeded()
+        let before = try #require(me.profile?.photos)
+        let jpeg = JPEGPhoto(data: Data([0xFF, 0xD8, 0xFF]), width: 400, height: 300)
+        let first = Task { await me.addPhotos([jpeg]) }
+        let second = Task { await me.addPhotos([jpeg]) }
+        await me.deletePhoto(before[1])
+        await first.value
+        await second.value
+        #expect(me.profile?.photos.contains(before[1]) == false, "the deleted photo stays deleted")
+        #expect(me.profile?.photos.count == before.count + 1, "both batches were added")
+        await me.refresh()
+        #expect(me.profile?.photos.contains(before[1]) == false)
+        #expect(me.actionFailure == nil)
+    }
+
     @Test func exploringAnotherPlaceChangesTheGrid() async throws {
         let session = try await signedIn()
         let browse = session.browse

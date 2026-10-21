@@ -103,7 +103,8 @@ public final class MeModel {
     public private(set) var state: LoadState = .idle
     public private(set) var blocked: [BlockedEntry] = []
     public private(set) var blockedState: LoadState = .idle
-    public private(set) var isUploadingPhotos = false
+    public var isUploadingPhotos: Bool { uploadingBatches > 0 }
+    private var uploadingBatches = 0
     public var actionFailure: Failure?
 
     /// A blocked profile with what is known about it.
@@ -115,6 +116,8 @@ public final class MeModel {
 
     @ObservationIgnored private let api: GrindrAPI
     @ObservationIgnored private let catalogs: CatalogModel
+    /// The last change to the photo list; each one waits for the one before.
+    @ObservationIgnored private var photoChange: Task<Void, Never>?
     public nonisolated let profileID: ProfileID
 
     init(api: GrindrAPI, profileID: ProfileID, catalogs: CatalogModel) {
@@ -165,41 +168,74 @@ public final class MeModel {
     /// Uploads JPEGs and adds them after your other photos. Photos that were
     /// uploaded before one fails are still added.
     public func addPhotos(_ jpegs: [JPEGPhoto]) async {
-        guard !isUploadingPhotos, let existing = profile?.photos else { return }
-        isUploadingPhotos = true
-        defer { isUploadingPhotos = false }
+        uploadingBatches += 1
+        defer { uploadingBatches -= 1 }
         var added: [ProfilePhoto] = []
-        var failure: Failure?
         for jpeg in jpegs.prefix(remainingPhotoSlots) {
             do {
                 added.append(try await api.uploadProfilePhoto(jpeg.data, width: jpeg.width, height: jpeg.height))
             } catch {
-                failure = Failure(error)
+                actionFailure = Failure(error)
                 break
             }
         }
-        if !added.isEmpty {
-            let photos = existing + added
+        guard !added.isEmpty else { return }
+        // Added to the list as it is now, which may have changed during the upload.
+        await changePhotos { [added] in
+            guard let current = self.profile?.photos else { return }
+            let photos = Array((current + added).prefix(Self.maxPhotos))
             do {
-                try await api.setProfilePhotos(photos.map(\.mediaHash))
-                profile?.photos = photos
+                try await self.api.setProfilePhotos(photos.map(\.mediaHash))
+                self.profile?.photos = photos
             } catch {
-                failure = Failure(error)
+                self.actionFailure = Failure(error)
             }
         }
-        if let failure { actionFailure = failure }
     }
 
     /// Moves a photo to `destination`; position 0 makes it the main photo.
     public func movePhoto(_ photo: ProfilePhoto, to destination: Int) async {
-        guard var photos = profile?.photos, let index = photos.firstIndex(of: photo) else { return }
-        photos.remove(at: index)
-        photos.insert(photo, at: min(max(destination, 0), photos.count))
-        await setPhotoOrder(photos)
+        await changePhotos {
+            guard var photos = self.profile?.photos, let index = photos.firstIndex(of: photo) else { return }
+            photos.remove(at: index)
+            photos.insert(photo, at: min(max(destination, 0), photos.count))
+            await self.savePhotoOrder(photos)
+        }
     }
 
-    /// Saves a new order; the first photo becomes the main one.
+    /// Saves a new order of your photos; the first one becomes the main one.
     public func setPhotoOrder(_ photos: [ProfilePhoto]) async {
+        await changePhotos {
+            // Only a new order of the photos there are now, not an older list.
+            guard let current = self.profile?.photos, Set(photos) == Set(current) else { return }
+            await self.savePhotoOrder(photos)
+        }
+    }
+
+    /// Deletes a photo from your profile and from Grindr's servers.
+    public func deletePhoto(_ photo: ProfilePhoto) async {
+        await changePhotos {
+            guard let original = self.profile?.photos, original.contains(photo) else { return }
+            let remaining = original.filter { $0 != photo }
+            self.profile?.photos = remaining
+            do {
+                try await self.api.deleteProfilePhotos([photo.mediaHash])
+            } catch {
+                self.profile?.photos = original
+                self.actionFailure = Failure(error)
+                return
+            }
+            // The next photo becomes the main one. The photo is gone either way.
+            guard original.first == photo else { return }
+            do {
+                try await self.api.setProfilePhotos(remaining.map(\.mediaHash))
+            } catch {
+                self.actionFailure = Failure(error)
+            }
+        }
+    }
+
+    private func savePhotoOrder(_ photos: [ProfilePhoto]) async {
         guard let original = profile?.photos, photos != original else { return }
         profile?.photos = photos
         do {
@@ -210,19 +246,16 @@ public final class MeModel {
         }
     }
 
-    /// Deletes a photo from your profile and from Grindr's servers.
-    public func deletePhoto(_ photo: ProfilePhoto) async {
-        guard let original = profile?.photos else { return }
-        let remaining = original.filter { $0 != photo }
-        profile?.photos = remaining
-        do {
-            try await api.deleteProfilePhotos([photo.mediaHash])
-            // The next photo becomes the main one.
-            if original.first == photo { try await api.setProfilePhotos(remaining.map(\.mediaHash)) }
-        } catch {
-            profile?.photos = original
-            actionFailure = Failure(error)
+    /// Runs changes to the photo list one after another, so each one starts
+    /// from the list the one before left, and none overwrites another.
+    private func changePhotos(_ change: @escaping @MainActor () async -> Void) async {
+        let previous = photoChange
+        let task = Task {
+            await previous?.value
+            await change()
         }
+        photoChange = task
+        await task.value
     }
 
     public func loadBlocked() async {

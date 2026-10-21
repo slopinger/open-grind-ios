@@ -9,6 +9,8 @@ struct EditPhotosView: View {
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var pendingDelete: ProfilePhoto?
     @State private var encodingFailure: Failure?
+    /// Picked photos are being prepared for upload.
+    @State private var isPreparing = false
 
     private var me: MeModel { session.me }
     private var photos: [ProfilePhoto] { me.profile?.photos ?? [] }
@@ -21,7 +23,7 @@ struct EditPhotosView: View {
                     ForEach(photos) { photo in
                         tile(photo)
                     }
-                    if me.isUploadingPhotos {
+                    if isPreparing || me.isUploadingPhotos {
                         PhotoSlot {
                             ProgressView()
                                 .accessibilityLabel("Uploading photos")
@@ -140,6 +142,8 @@ struct EditPhotosView: View {
 
     /// Prepares the picked photos, then adds the ones that could be read in one go.
     private func upload(_ items: [PhotosPickerItem]) async {
+        isPreparing = true
+        defer { isPreparing = false }
         var jpegs: [JPEGPhoto] = []
         for item in items {
             do {
