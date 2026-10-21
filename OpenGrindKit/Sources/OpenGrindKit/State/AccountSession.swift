@@ -72,12 +72,20 @@ public final class AccountSession {
         lastLocationUpdate = .now
     }
 
-    /// Your location changed, e.g. to a place you chose (``LocationChoice``):
-    /// moves your profile there at once and reloads the grid around it.
-    public func locationChanged() async {
+    /// What the Explore map chose: browse `place`, and with `appearThere` also
+    /// appear there (your profile moves to it, see ``LocationChoice``). `nil`
+    /// goes back to where you are, ending both.
+    public func go(to place: ExplorePlace?, appearThere: Bool, location: LocationChoice) async {
+        let moves = appearThere || location.place != nil
+        location.choose(appearThere ? place : nil)
+        guard moves else {
+            await browse.explore(place)
+            return
+        }
+        // Where you appear is your nearby grid, so there is nothing to explore then.
         lastLocationUpdate = nil
         async let moved: Void = updateLocationIfNeeded()
-        async let grid: Void = browse.refresh()
+        async let grid: Void = browse.explore(appearThere ? nil : place)
         _ = await (moved, grid)
     }
 

@@ -83,10 +83,11 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
 - Genders/pronouns: `genders`/`pronouns` ID lists in the profile update, max 3 each (upstream). Gender
   catalog: `displayGroup` 0 = not offered, `sortProfile`, `excludeOnProfileSelection`.
 - Location spoofing (upstream's "teleport"): `LocationChoice` (made by `AppModel`, one per transport) wraps
-  the device location; with a place chosen (Profile > Location, `ExploreSheet(.appearHere)`), sign-in,
+  the device location; with a place chosen ("Appear Here Too" toggle in the Explore map), sign-in,
   `PUT /v4/location` and the grid's `nearbyGeoHash` all use it and the device is never asked.
-  `AccountSession.locationChanged()` moves you at once. App-wide, UserDefaults key `chosenPlace`; the demo
-  keeps it for the run only. Explore (look around without moving) is separate.
+  `AccountSession.go(to:appearThere:location:)` explores, appears (then the place is the nearby grid, not
+  explored) or goes back to both at once. App-wide, UserDefaults key `chosenPlace`; the demo keeps it for
+  the run only.
 - Filters persist per account (`PreferenceStore`, UserDefaults key `browseFilters.<profileID>`); the
   explored place is never persisted. Every end of a session (sign-out, expiry, ban) clears them and
   runs `AccountController.onSignOut`, which empties the image cache.

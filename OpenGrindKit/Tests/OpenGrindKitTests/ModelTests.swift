@@ -228,16 +228,22 @@ struct ModelTests {
         let preferences = DefaultsPreferenceStore(defaults: defaults)
         let transport = FakeTransport { _ in .json(#"{"items":[],"nextPage":null}"#) }
         let berlin = ExplorePlace(latitude: 52.52, longitude: 13.405, name: "Berlin")
+        let paris = ExplorePlace(latitude: 48.86, longitude: 2.35, name: "Paris")
         let choice = LocationChoice(device: DeviceNeverAsked(), preferences: preferences)
-        choice.choose(berlin)
         let session = AccountSession(profileID: 1, api: GrindrAPI(transport: transport), location: choice.location)
 
-        await session.locationChanged()
+        await session.go(to: paris, appearThere: false, location: choice)
+        #expect(session.browse.exploring == paris && choice.place == nil)
+        #expect(!transport.requests.contains { $0.path == "/v4/location" }, "exploring alone doesn't move you")
+
+        await session.go(to: berlin, appearThere: true, location: choice)
+        #expect(choice.place == berlin && session.browse.exploring == nil, "where you appear is your nearby grid")
         let geohash = Geohash.coarsen(berlin.geohash)
         let location = try #require(transport.requests.first { $0.path == "/v4/location" })
         #expect(location.method == .put && location.body == .json(Data(#"{"geohash":"\#(geohash)"}"#.utf8)))
-        let cascade = try #require(transport.requests.first { $0.path.hasPrefix("/v4/cascade") })
-        #expect(URLComponents(string: cascade.path)?.queryItems?.first?.value == geohash)
+        let cascade = try #require(transport.requests.last { $0.path.hasPrefix("/v4/cascade") })
+        #expect(
+            URLComponents(string: cascade.path)?.queryItems == [URLQueryItem(name: "nearbyGeoHash", value: geohash)])
 
         #expect(LocationChoice(device: DeviceNeverAsked(), preferences: preferences).place == berlin, "remembered")
         choice.choose(nil)

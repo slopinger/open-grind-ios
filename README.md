@@ -41,9 +41,9 @@ Everyone shown is made up; the avatars are DiceBear's Notionists by Zoish (CC0).
 - **Interest**: taps and profile views.
 - **Your profile**: edit every field Grindr allows, including gender, pronouns and up to 10 tags; add,
   reorder and delete photos (new ones are marked while Grindr reviews them); manage blocked profiles.
-- **Location**: appear anywhere instead of where you are, as in upstream Open Grind: pick a place on
-  the map under Profile > Location, and Grindr sees you, your profile and your grid there until you
-  switch back to your current location. No subscription, no GPS faking.
+- **Appear anywhere**: turn on "Appear Here Too" on the Explore map, and Grindr sees you, your
+  profile and your grid at that place instead of where you are, until you go back to your location;
+  as upstream Open Grind's location picker does. No subscription, no GPS faking.
 - **Demo**: try every screen with made-up profiles, without an account.
 
 Built to Apple's Human Interface Guidelines: system navigation, tab bar and sheets; Dynamic Type,
@@ -65,7 +65,7 @@ Only email and password. Other methods were looked into:
 ## Privacy
 
 - Your location is rounded to a 0.001° grid (about 100 m) before it is sent. With a place chosen
-  under Location, the app sends that place and never asks the device where it is.
+  to appear at, the app sends that place and never asks the device where it is.
 - Every sign-out gives the app a new device identity, so the next sign-in can't be linked to it.
 - The session token is kept in the Keychain (this device only); your password is never stored.
 - Photos you send or upload are re-encoded, which removes EXIF data such as where they were taken.

@@ -6,7 +6,6 @@ struct MeView: View {
     @Environment(AccountSession.self) private var session
     @Environment(AppModel.self) private var app
     @State private var isEditing = false
-    @State private var isChoosingLocation = false
     @State private var isConfirmingSignOut = false
 
     private var me: MeModel { session.me }
@@ -37,25 +36,6 @@ struct MeView: View {
                     NavigationLink(value: Route.profile(session.profileID)) {
                         Label("Preview Profile", systemImage: "eye")
                     }
-                }
-
-                Section {
-                    Button {
-                        isChoosingLocation = true
-                    } label: {
-                        LabeledContent {
-                            Text(
-                                app.locationChoice.place.map { Formatting.place($0.name) }
-                                    ?? String(localized: "Current Location"))
-                        } label: {
-                            Label(
-                                "Location",
-                                systemImage: app.locationChoice.place == nil ? "location" : "mappin.and.ellipse")
-                        }
-                    }
-                    .foregroundStyle(Color.primary)
-                } footer: {
-                    Text("Where Grindr sees you and your profile: where you are, or a place you choose on the map.")
                 }
 
                 Section("Privacy & Safety") {
@@ -91,15 +71,6 @@ struct MeView: View {
             .sheet(isPresented: $isEditing) {
                 if let profile = me.profile {
                     EditProfileView(profile: profile, me: me)
-                }
-            }
-            .sheet(isPresented: $isChoosingLocation) {
-                let choice = app.locationChoice
-                ExploreSheet(
-                    .appearHere, start: choice.place ?? session.browse.currentPlace, isAway: choice.place != nil
-                ) { place in
-                    choice.choose(place)
-                    Task { await session.locationChanged() }
                 }
             }
             .confirmationDialog(

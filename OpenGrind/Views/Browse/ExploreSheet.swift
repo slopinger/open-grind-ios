@@ -2,21 +2,15 @@ import MapKit
 import OpenGrindKit
 import SwiftUI
 
-/// A map for choosing a place: search for a city, tap the map or drag the pin.
-/// Either to look around there while your profile stays where you are, or to
-/// appear there instead of where you are (``LocationChoice``).
+/// A map for choosing a place to look around: search for a city, tap the map
+/// or drag the pin, then explore. Your profile stays where you are, unless you
+/// also appear there (``LocationChoice``).
 struct ExploreSheet: View {
-    enum Purpose {
-        /// Browse another place; your profile stays.
-        case explore
-        /// Appear at the place: your profile and your grid move there.
-        case appearHere
-    }
-
-    let purpose: Purpose
     /// Exploring, or appearing at a chosen place: offers going back to where you are.
     let isAway: Bool
-    let explore: (ExplorePlace?) -> Void
+    /// Called with the chosen place and whether to appear there too, or with
+    /// `nil` to go back to where you are.
+    let explore: (_ place: ExplorePlace?, _ appearHere: Bool) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var position: MapCameraPosition
@@ -30,16 +24,18 @@ struct ExploreSheet: View {
     @State private var results: [PlaceResult] = []
     /// Where the camera is, to search near it.
     @State private var visibleRegion: MKCoordinateRegion?
+    /// Move your profile to the place as well, instead of only looking around.
+    @State private var appearHere: Bool
 
     /// - Parameters:
-    ///   - start: Where the pin starts: the place chosen before, or where you are.
-    ///   - explore: Called with the chosen place, or `nil` to go back to where you are.
+    ///   - start: Where the pin starts: the place explored or appeared at, or where you are.
+    ///   - isAppearing: You appear at a chosen place now; the toggle starts on.
     init(
-        _ purpose: Purpose = .explore, start: ExplorePlace?, isAway: Bool,
-        explore: @escaping (ExplorePlace?) -> Void
+        start: ExplorePlace?, isAway: Bool, isAppearing: Bool,
+        explore: @escaping (_ place: ExplorePlace?, _ appearHere: Bool) -> Void
     ) {
-        self.purpose = purpose
         self.isAway = isAway
+        _appearHere = State(initialValue: isAppearing)
         self.explore = explore
         let coordinate = start.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
         _pin = State(initialValue: coordinate)
@@ -93,7 +89,7 @@ struct ExploreSheet: View {
                 .onMapCameraChange(frequency: .onEnd) { visibleRegion = $0.region }
             }
             .safeAreaInset(edge: .bottom) { panel }
-            .navigationTitle(purpose == .explore ? Text("Explore") : Text("Your Location"))
+            .navigationTitle("Explore")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(
                 text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for a City"
@@ -163,12 +159,16 @@ struct ExploreSheet: View {
             .frame(maxWidth: .infinity)
             .accessibilityElement(children: .combine)
 
+            Toggle("Appear Here Too", systemImage: "mappin.and.ellipse", isOn: $appearHere)
+                .font(.subheadline.weight(.semibold))
+                .tint(.brand)
+
             Button {
                 guard let pin else { return }
-                explore(ExplorePlace(latitude: pin.latitude, longitude: pin.longitude, name: placeName))
+                explore(ExplorePlace(latitude: pin.latitude, longitude: pin.longitude, name: placeName), appearHere)
                 dismiss()
             } label: {
-                Label(actionTitle, systemImage: purpose == .explore ? "binoculars.fill" : "mappin.and.ellipse")
+                Label(actionTitle, systemImage: "binoculars.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 38)
             }
@@ -178,8 +178,8 @@ struct ExploreSheet: View {
             .disabled(pin == nil)
 
             if isAway {
-                Button(backTitle, systemImage: "location.fill") {
-                    explore(nil)
+                Button("Back to My Location", systemImage: "location.fill") {
+                    explore(nil, false)
                     dismiss()
                 }
                 .font(.subheadline.weight(.semibold))
@@ -195,25 +195,13 @@ struct ExploreSheet: View {
     }
 
     private var actionTitle: LocalizedStringKey {
-        switch purpose {
-        case .explore: "Explore Here"
-        case .appearHere: "Appear Here"
-        }
-    }
-
-    private var backTitle: LocalizedStringKey {
-        switch purpose {
-        case .explore: "Back to My Location"
-        case .appearHere: "Use My Current Location"
-        }
+        appearHere ? "Explore and Appear Here" : "Explore Here"
     }
 
     private var footnote: LocalizedStringKey {
-        switch purpose {
-        case .explore: "Drag the pin or tap the map to move it. Your profile stays where you are."
-        case .appearHere:
-            "Drag the pin or tap the map to move it. Grindr sees you and your profile here instead of where you are, until you switch back."
-        }
+        appearHere
+            ? "Grindr sees you and your profile here instead of where you are, until you go back to your location."
+            : "Drag the pin or tap the map to move it. Your profile stays where you are."
     }
 
     private func select(_ result: PlaceResult) {

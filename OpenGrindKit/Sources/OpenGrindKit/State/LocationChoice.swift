@@ -26,7 +26,7 @@ public final class LocationChoice {
     }
 
     /// Appears at `place` from now on; `nil` goes back to the device's location.
-    /// Call ``AccountSession/locationChanged()`` to move there at once.
+    /// ``AccountSession/go(to:appearThere:location:)`` also moves you there at once.
     public func choose(_ place: ExplorePlace?) {
         self.place = place
         chosen.place = place

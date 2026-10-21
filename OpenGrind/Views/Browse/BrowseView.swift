@@ -4,11 +4,18 @@ import SwiftUI
 /// The grid of profiles nearby.
 struct BrowseView: View {
     @Environment(AccountSession.self) private var session
+    @Environment(AppModel.self) private var app
     @State private var isShowingFilters = false
     @State private var isShowingExplore = false
     @Namespace private var transition
 
     private var browse: BrowseModel { session.browse }
+    /// The place you appear at instead of where you are, if any.
+    private var appearingAt: ExplorePlace? { app.locationChoice.place }
+
+    private func go(to place: ExplorePlace?, appearThere: Bool = false) {
+        Task { await session.go(to: place, appearThere: appearThere, location: app.locationChoice) }
+    }
 
     var body: some View {
         // Untyped: the stack holds grid tiles as well as routes.
@@ -22,9 +29,10 @@ struct BrowseView: View {
                 }
                 .sheet(isPresented: $isShowingExplore) {
                     ExploreSheet(
-                        start: browse.exploring ?? browse.currentPlace, isAway: browse.exploring != nil
-                    ) { place in
-                        Task { await browse.explore(place) }
+                        start: browse.exploring ?? appearingAt ?? browse.currentPlace,
+                        isAway: browse.exploring != nil || appearingAt != nil, isAppearing: appearingAt != nil
+                    ) { place, appearHere in
+                        go(to: place, appearThere: appearHere)
                     }
                 }
                 .routeDestinations()
@@ -56,18 +64,19 @@ struct BrowseView: View {
     /// A place can fail to load for good; going back to your location always works.
     private var backToMyLocation: FailureView.Recovery? {
         guard browse.exploring != nil else { return nil }
-        return FailureView.Recovery(title: "Back to My Location") {
-            Task { await browse.explore(nil) }
-        }
+        return FailureView.Recovery(title: "Back to My Location") { go(to: nil) }
     }
 
     /// Part of the content rather than a safe area inset, so it sits below the large
     /// title and scrolls with the grid instead of covering the title.
     private var bar: some View {
-        BrowseBar(place: browse.exploring, activeFilters: browse.filters.activeCount) {
+        BrowseBar(
+            place: browse.exploring ?? appearingAt, isAppearing: browse.exploring == nil && appearingAt != nil,
+            activeFilters: browse.filters.activeCount
+        ) {
             isShowingExplore = true
         } stopExploring: {
-            Task { await browse.explore(nil) }
+            go(to: nil)
         } showFilters: {
             isShowingFilters = true
         }
@@ -103,10 +112,8 @@ struct BrowseView: View {
             } description: {
                 Text("No one is around this place right now. Try another one.")
             } actions: {
-                Button("Back to My Location") {
-                    Task { await browse.explore(nil) }
-                }
-                .buttonStyle(.bordered)
+                Button("Back to My Location") { go(to: nil) }
+                    .buttonStyle(.bordered)
             }
         } else if browse.filters.isDefault {
             ContentUnavailableView {
@@ -132,7 +139,10 @@ struct BrowseView: View {
 /// The row above the grid: a search-field-like button that opens the map to
 /// explore somewhere else, and the filters.
 private struct BrowseBar: View {
+    /// The place explored, or the one you appear at.
     let place: ExplorePlace?
+    /// `place` is where you appear, not only explore.
+    let isAppearing: Bool
     let activeFilters: Int
     let explore: () -> Void
     let stopExploring: () -> Void
@@ -142,8 +152,11 @@ private struct BrowseBar: View {
         HStack(spacing: 8) {
             Button(action: explore) {
                 HStack(spacing: 8) {
-                    Image(systemName: place == nil ? "magnifyingglass" : "binoculars.fill")
-                        .foregroundStyle(place == nil ? Color.secondary : Color.brand)
+                    Image(
+                        systemName: place == nil
+                            ? "magnifyingglass" : isAppearing ? "mappin.and.ellipse" : "binoculars.fill"
+                    )
+                    .foregroundStyle(place == nil ? Color.secondary : Color.brand)
                     if let place {
                         Text(Formatting.place(place.name))
                             .foregroundStyle(.primary)
@@ -164,7 +177,11 @@ private struct BrowseBar: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(
-                place.map { Text("Exploring \(Formatting.place($0.name))") }
+                place.map {
+                    isAppearing
+                        ? Text("Appearing in \(Formatting.place($0.name))")
+                        : Text("Exploring \(Formatting.place($0.name))")
+                }
                     ?? Text("Explore Another Place")
             )
             .accessibilityHint("Opens a map to choose a place.")
