@@ -95,8 +95,7 @@ public final class BrowseModel {
         do {
             let next = try await api.cascade(area, filters: filters, page: page)
             guard generation == self.generation else { return }
-            let known = Set(profiles.map(\.id))
-            profiles += next.profiles.filter { !known.contains($0.id) }
+            profiles += next.profiles.uniqued(excluding: profiles.map(\.id))
             nextPage = next.nextPage
         } catch {
             // The grid stays usable; scrolling to the end again retries.

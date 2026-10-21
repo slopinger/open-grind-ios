@@ -93,9 +93,8 @@ public final class InboxModel {
         else {
             return
         }
-        let known = Set(conversations.map(\.id))
         conversations = Self.sorted(
-            conversations + next.conversations.filter { !known.contains($0.id) })
+            conversations + next.conversations.uniqued(excluding: conversations.map(\.id)))
         nextPage = next.nextPage
     }
 

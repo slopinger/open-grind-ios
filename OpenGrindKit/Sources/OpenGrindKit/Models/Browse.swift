@@ -115,8 +115,7 @@ extension CascadePage: Decodable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let items = container.lossyArray(of: Item.self, forKey: .items)
-        var seen = Set<ProfileID>()
-        profiles = items.compactMap(\.profile).filter { seen.insert($0.id).inserted }
+        profiles = items.compactMap(\.profile).uniqued()
         nextPage = container.lenient(Int.self, forKey: .nextPage)
     }
 }

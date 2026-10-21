@@ -39,8 +39,7 @@ public struct ProfileTagCatalog: Hashable, Sendable {
 
     public init(categories: [ProfileTagCategory]) {
         self.categories = categories
-        var seen = Set<String>()
-        tags = categories.flatMap(\.tags).filter { seen.insert($0.key).inserted }
+        tags = categories.flatMap(\.tags).uniqued()
         tagsByKey = Dictionary(tags.map { ($0.key, $0) }, uniquingKeysWith: { first, _ in first })
         keysByText = Dictionary(tags.map { ($0.text, $0.key) }, uniquingKeysWith: { first, _ in first })
     }

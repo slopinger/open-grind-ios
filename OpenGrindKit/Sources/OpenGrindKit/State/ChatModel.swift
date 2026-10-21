@@ -122,8 +122,7 @@ public final class ChatModel: Identifiable {
         defer { isLoadingOlder = false }
         do {
             let page = try await api.messages(in: conversationID, pageKey: key)
-            let known = Set(items.map(\.id))
-            let older = Self.visible(page.messages.reversed()).filter { !known.contains($0.id) }
+            let older = Self.visible(page.messages.reversed()).uniqued(excluding: items.map(\.id))
             items.insert(contentsOf: older.map { Item(message: $0, delivery: .sent) }, at: 0)
             olderPageKey = page.nextPageKey
         } catch {
