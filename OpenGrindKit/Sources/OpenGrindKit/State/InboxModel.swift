@@ -27,7 +27,8 @@ public final class InboxModel {
     @ObservationIgnored private let me: ProfileID
     @ObservationIgnored private var nextPage: Int?
     @ObservationIgnored private var generation = 0
-    @ObservationIgnored private var pendingRefresh: Task<Void, Never>?
+    /// Change events come in bursts; the inbox is reloaded once they settle.
+    @ObservationIgnored private let refreshAfterChanges = Debouncer(.milliseconds(600))
 
     init(api: GrindrAPI, me: ProfileID) {
         self.api = api
@@ -211,14 +212,8 @@ public final class InboxModel {
         conversations = Self.sorted(conversations)
     }
 
-    /// Coalesces bursts of change events into one reload.
     private func scheduleRefresh() {
-        pendingRefresh?.cancel()
-        pendingRefresh = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(600))
-            guard !Task.isCancelled else { return }
-            await self?.refresh()
-        }
+        refreshAfterChanges.schedule { [weak self] in await self?.refresh() }
     }
 
     static func sorted(_ conversations: [Conversation]) -> [Conversation] {

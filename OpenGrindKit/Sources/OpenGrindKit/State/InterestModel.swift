@@ -19,7 +19,7 @@ public final class InterestModel {
     @ObservationIgnored private let api: GrindrAPI
     @ObservationIgnored private let me: ProfileID
     /// Views often come in bursts; the list is reloaded once they settle.
-    @ObservationIgnored private var pendingViewsRefresh: Task<Void, Never>?
+    @ObservationIgnored private let viewsRefresh = Debouncer(.milliseconds(600))
 
     init(api: GrindrAPI, me: ProfileID) {
         self.api = api
@@ -68,15 +68,6 @@ public final class InterestModel {
         views.viewers.removeAll { $0.profileID == profileID }
     }
 
-    private func scheduleViewsRefresh() {
-        pendingViewsRefresh?.cancel()
-        pendingViewsRefresh = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(600))
-            guard !Task.isCancelled else { return }
-            await self?.refreshViews()
-        }
-    }
-
     func handle(_ event: RealtimeEvent) {
         switch event {
         case .tapReceived(let tap) where tap.profileID != me:
@@ -85,7 +76,7 @@ public final class InterestModel {
             if !isOnScreen { unseenCount += 1 }
         case .profileViewed(let viewer, _, _) where viewer != me:
             if !isOnScreen { unseenCount += 1 }
-            scheduleViewsRefresh()
+            viewsRefresh.schedule { [weak self] in await self?.refreshViews() }
         default:
             break
         }
