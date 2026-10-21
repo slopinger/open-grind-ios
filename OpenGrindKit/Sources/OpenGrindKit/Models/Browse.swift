@@ -211,7 +211,6 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
     }
 }
 
-/// A place to browse other than where you are.
 /// Where a grid page looks for profiles.
 public enum BrowseArea: Hashable, Sendable {
     /// Around you, at this geohash. Grindr also moves your profile there.
@@ -220,6 +219,7 @@ public enum BrowseArea: Hashable, Sendable {
     case exploring(geohash: String)
 }
 
+/// A place to browse other than where you are.
 public struct ExplorePlace: Hashable, Sendable {
     public var latitude: Double
     public var longitude: Double

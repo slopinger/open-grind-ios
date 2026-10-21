@@ -80,7 +80,7 @@ public enum GrindrError: Error, Sendable, Hashable {
         switch (response.status, code) {
         case (401, _): return .unauthorized
         case (429, _): return .rateLimited
-        // Exploring another place is only for paid subscriptions (seen as a bare "CAS-4001").
+        // Paid features. A bare "CAS-4001" came back for a cascade with both nearby and explore geohashes.
         case (_, "urn:gr:err:tiered_feature"), (_, "CAS-4001"): return .requiresSubscription
         case (_, "urn:gr:err:hit_banned_terms"): return .rejectedText
         case (403, "urn:gr:err:unauthorized_action"), (404, _): return .unavailable
