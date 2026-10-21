@@ -76,7 +76,8 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   memory note on decompiling): Edit Profile saves the whole profile with `PUT /v3.1/me/profile`
   (`ProfileEdit.update(of:)`, carrying over tribesImInto, socialNetworks, approximateDistance), reports go to
   `POST /v3.1/flags/{id}`, cascade filters use `isFavorites`, `heightInCmMin/Max`, `weightInGramsMin/Max`,
-  and sign-out keeps the device identity. Check new requests the same way before adding them. The app sends
+  and every sign-out rotates the device identity (`sign_out_rotating`, as upstream's `forget_account`
+  does, for privacy). Check new requests the same way before adding them. The app sends
   no Sift or reCAPTCHA signals (neither does upstream; its reCAPTCHA helper is an Android add-on), and a
   user's account was banned on 2026-10-21 while using the app; the cause is unknown.
 - Genders/pronouns: `genders`/`pronouns` ID lists in the profile update, max 3 each (upstream). Gender
