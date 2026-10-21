@@ -8,7 +8,6 @@ struct EditPhotosView: View {
     @State private var isPickingPhotos = false
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var pendingDelete: ProfilePhoto?
-    @State private var encodingFailure: Failure?
     /// Picked photos are being prepared for upload.
     @State private var isPreparing = false
 
@@ -63,7 +62,6 @@ struct EditPhotosView: View {
             Text("The photo is removed from your profile and from Grindr.")
         }
         .failureAlert($me.actionFailure)
-        .failureAlert($encodingFailure)
         .sensoryFeedback(.success, trigger: photos.count) { old, new in new > old }
         .task { await me.loadIfNeeded() }
     }
@@ -135,23 +133,25 @@ struct EditPhotosView: View {
         Task { await me.movePhoto(photo, to: destination) }
     }
 
-    /// Prepares the picked photos, then adds the ones that could be read in one go.
+    /// Prepares the picked photos side by side, then adds the ones that could be
+    /// read in one go, in the order they were picked.
     private func upload(_ items: [PhotosPickerItem]) async {
         isPreparing = true
         defer { isPreparing = false }
-        var jpegs: [JPEGPhoto] = []
-        for item in items {
-            do {
-                if let jpeg = try await PhotoEncoder.jpeg(from: item) {
-                    jpegs.append(jpeg)
-                } else {
-                    encodingFailure = .unexpected("unreadable photo")
+        let prepared = await withTaskGroup(of: (index: Int, result: Result<JPEGPhoto, Failure>).self) { group in
+            for (index, item) in items.enumerated() {
+                group.addTask {
+                    do {
+                        return (index, .success(try await PhotoEncoder.jpeg(from: item)))
+                    } catch {
+                        return (index, .failure(Failure(error)))
+                    }
                 }
-            } catch {
-                encodingFailure = Failure(error)
             }
+            return await group.reduce(into: []) { $0.append($1) }.sorted { $0.index < $1.index }.map(\.result)
         }
-        await me.addPhotos(jpegs)
+        for case .failure(let failure) in prepared { me.actionFailure = failure }
+        await me.addPhotos(prepared.compactMap { try? $0.get() })
     }
 }
 

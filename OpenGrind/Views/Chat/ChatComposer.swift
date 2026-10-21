@@ -8,7 +8,6 @@ struct ChatComposer: View {
     var isFocused: FocusState<Bool>.Binding
 
     @State private var photoItem: PhotosPickerItem?
-    @State private var photoFailure: Failure?
     @State private var sentCount = 0
 
     var body: some View {
@@ -48,7 +47,6 @@ struct ChatComposer: View {
             Task { await sendPhoto(item) }
         }
         .sensoryFeedback(.impact(weight: .light), trigger: sentCount)
-        .failureAlert($photoFailure)
     }
 
     private func send() {
@@ -59,14 +57,11 @@ struct ChatComposer: View {
 
     private func sendPhoto(_ item: PhotosPickerItem) async {
         do {
-            guard let photo = try await PhotoEncoder.jpeg(from: item) else {
-                photoFailure = .unexpected("unreadable photo")
-                return
-            }
+            let photo = try await PhotoEncoder.jpeg(from: item)
             sentCount += 1
             await chat.sendPhoto(photo.data)
         } catch {
-            photoFailure = Failure(error)
+            chat.actionFailure = Failure(error)
         }
     }
 }

@@ -10,11 +10,13 @@ import UniformTypeIdentifiers
 enum PhotoEncoder {
     static let maxPixelSize = 2048
 
-    /// The picked photo as a JPEG; `nil` when it isn't an image that can be read.
+    /// The picked photo as a JPEG. Throws if it isn't an image that can be read.
     @concurrent
-    static func jpeg(from item: PhotosPickerItem) async throws -> JPEGPhoto? {
-        guard let data = try await item.loadTransferable(type: Data.self) else { return nil }
-        return await jpeg(from: data)
+    static func jpeg(from item: PhotosPickerItem) async throws -> JPEGPhoto {
+        guard let data = try await item.loadTransferable(type: Data.self), let jpeg = await jpeg(from: data) else {
+            throw Failure.unexpected("unreadable photo")
+        }
+        return jpeg
     }
 
     @concurrent
