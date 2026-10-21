@@ -44,8 +44,14 @@ public final class AccountController {
         self.isDemo = isDemo
         state = .signedOut
 
-        transport.setEventHandler { [weak self] event in
-            Task { @MainActor in self?.handle(event) }
+        // One stream keeps the events in the order the transport sent them.
+        let (events, continuation) = AsyncStream.makeStream(of: TransportEvent.self)
+        transport.setEventHandler { continuation.yield($0) }
+        Task { [weak self] in
+            for await event in events {
+                guard let self else { return }
+                handle(event)
+            }
         }
         if let stored = credentials.loadCredentials(),
             let profileID = profileID(fromCredentials: stored)
