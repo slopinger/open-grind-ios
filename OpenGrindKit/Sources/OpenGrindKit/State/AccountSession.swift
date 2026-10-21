@@ -61,7 +61,7 @@ public final class AccountSession {
     /// Sends your location to Grindr at most every five minutes, so others see
     /// a current distance.
     func updateLocationIfNeeded() async {
-        // At launch, starting and becoming active both ask at once.
+        // Starting and returning to the foreground can ask at the same time.
         guard !isUpdatingLocation else { return }
         if let lastLocationUpdate, Date.now.timeIntervalSince(lastLocationUpdate) < 300 { return }
         isUpdatingLocation = true

@@ -48,7 +48,8 @@ private struct ChatContent: View {
                 chat.disappeared()
             }
             .onChange(of: scenePhase) { _, phase in
-                guard isVisible else { return }
+                // Inactive, e.g. under Control Center, is still in the foreground.
+                guard isVisible, phase != .inactive else { return }
                 if phase == .active {
                     chat.appeared()
                     Task { await chat.reload() }

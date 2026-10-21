@@ -13,7 +13,8 @@ struct OpenGrindApp: App {
                 .environment(\.imagePipeline, model.images)
         }
         .onChange(of: scenePhase) { _, phase in
-            model.account.setActive(phase == .active)
+            // Inactive, e.g. under Control Center or an alert, is still in the foreground.
+            if phase != .inactive { model.account.setActive(phase == .active) }
         }
     }
 }

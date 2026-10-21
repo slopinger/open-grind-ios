@@ -31,6 +31,7 @@ public final class AccountController {
     private let credentials: any CredentialStore
     private let location: any LocationProviding
     private let preferences: (any PreferenceStore)?
+    @ObservationIgnored private var isActive = true
 
     /// Creates the controller and resumes the stored account, if any.
     ///
@@ -86,8 +87,11 @@ public final class AccountController {
         try? await transport.signOut()
     }
 
-    /// Follows the app into the foreground and background.
+    /// Follows the app into the foreground and background. Only a change counts:
+    /// the app starts active, and its first "active" is no return to the foreground.
     public func setActive(_ isActive: Bool) {
+        guard isActive != self.isActive else { return }
+        self.isActive = isActive
         transport.setActive(isActive)
         if isActive { session?.becameActive() }
     }
