@@ -8,10 +8,19 @@ import OpenGrindKit
 @MainActor
 @Observable
 final class AppModel {
-    private(set) var account: AccountController
-    private(set) var images: ImagePipeline
+    /// The account and what belongs to its transport, replaced together.
+    private struct Setup {
+        var account: AccountController
+        var images: ImagePipeline
+        var failure: Failure?
+    }
+
+    private var setup: Setup
+
+    var account: AccountController { setup.account }
+    var images: ImagePipeline { setup.images }
     /// The transport could not be set up; shown instead of the sign-in screen.
-    private(set) var startupFailure: Failure?
+    var startupFailure: Failure? { setup.failure }
 
     let location = LocationService()
 
@@ -22,10 +31,7 @@ final class AppModel {
     init() {
         // Also set by the launch argument `-demoMode YES`.
         let isDemo = UserDefaults.standard.bool(forKey: Self.demoKey)
-        let setup = Self.makeAccount(isDemo: isDemo, keychain: keychain, location: location)
-        account = setup.account
-        images = setup.images
-        startupFailure = setup.failure
+        setup = Self.makeSetup(isDemo: isDemo, keychain: keychain, location: location)
     }
 
     var isDemo: Bool { account.isDemo }
@@ -51,15 +57,10 @@ final class AppModel {
     }
 
     private func rebuild(isDemo: Bool) {
-        let setup = Self.makeAccount(isDemo: isDemo, keychain: keychain, location: location)
-        account = setup.account
-        images = setup.images
-        startupFailure = setup.failure
+        setup = Self.makeSetup(isDemo: isDemo, keychain: keychain, location: location)
     }
 
-    private static func makeAccount(
-        isDemo: Bool, keychain: KeychainStore, location: LocationService
-    ) -> (account: AccountController, images: ImagePipeline, failure: Failure?) {
+    private static func makeSetup(isDemo: Bool, keychain: KeychainStore, location: LocationService) -> Setup {
         if isDemo {
             let transport = DemoTransport(loadImage: loadDemoAvatar)
             let account = AccountController(
@@ -67,11 +68,16 @@ final class AppModel {
                 credentials: InMemoryCredentialStore(credentials: DemoTransport.credentials),
                 location: FixedLocation(geohash: DemoTransport.geohash), preferences: DefaultsPreferenceStore(),
                 isDemo: true)
-            return (account, ImagePipeline(transport: transport), nil)
+            return Setup(account: account, images: ImagePipeline(transport: transport))
         }
 
-        let device = keychain.device ?? CoreTransport.makeDevice()
-        keychain.device = device
+        let device: String
+        if let stored = keychain.device {
+            device = stored
+        } else {
+            device = CoreTransport.makeDevice()
+            keychain.device = device
+        }
         let transport: CoreTransport
         do {
             transport = try CoreTransport(deviceJSON: device, credentials: keychain.loadCredentials())
@@ -82,12 +88,14 @@ final class AppModel {
             if let signedOut = try? CoreTransport(deviceJSON: device, credentials: nil) {
                 transport = signedOut
             } else {
-                keychain.device = CoreTransport.makeDevice()
+                let fresh = CoreTransport.makeDevice()
+                keychain.device = fresh
                 do {
-                    transport = try CoreTransport(deviceJSON: keychain.device ?? device, credentials: nil)
+                    transport = try CoreTransport(deviceJSON: fresh, credentials: nil)
                 } catch {
-                    let demo = makeAccount(isDemo: true, keychain: keychain, location: location)
-                    return (demo.account, demo.images, Failure(error))
+                    var demo = makeSetup(isDemo: true, keychain: keychain, location: location)
+                    demo.failure = Failure(error)
+                    return demo
                 }
             }
         }
@@ -96,7 +104,7 @@ final class AppModel {
             transport: transport, credentials: keychain, location: location, preferences: DefaultsPreferenceStore())
         let images = ImagePipeline(transport: transport)
         account.onSignOut = { await images.removeAll() }
-        return (account, images, nil)
+        return Setup(account: account, images: images)
     }
 
     /// A demo avatar from DiceBear, which serves about ten PNGs a second and
