@@ -53,9 +53,7 @@ struct ProfileDetails: View {
                 }
             }
             HStack(spacing: 12) {
-                if let presence = Formatting.presence(
-                    onlineUntil: profile.onlineUntil, lastSeen: profile.lastSeen)
-                {
+                if let presence = Formatting.presence(profile, lastSeen: profile.lastSeen) {
                     HStack(spacing: 5) {
                         if profile.isOnline() {
                             OnlineIndicator().frame(width: 9, height: 9)

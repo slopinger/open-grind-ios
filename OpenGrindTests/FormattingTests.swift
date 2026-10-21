@@ -14,8 +14,10 @@ struct FormattingTests {
 
     @Test func presenceSaysOnlineOnlyWhileOnline() {
         let now = Date.now
-        #expect(Formatting.presence(onlineUntil: now.addingTimeInterval(60), lastSeen: nil, now: now) != nil)
-        #expect(Formatting.presence(onlineUntil: now.addingTimeInterval(-60), lastSeen: nil, now: now) == nil)
+        let online = GridProfile(id: 1, onlineUntil: now.addingTimeInterval(60))
+        let offline = GridProfile(id: 2, onlineUntil: now.addingTimeInterval(-60))
+        #expect(Formatting.presence(online, lastSeen: nil, now: now) != nil)
+        #expect(Formatting.presence(offline, lastSeen: nil, now: now) == nil)
     }
 
     @Test func everyFailureHasText() {

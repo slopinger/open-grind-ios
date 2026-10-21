@@ -53,8 +53,8 @@ enum Formatting {
     }
 
     /// "Online now", "Active 5 min. ago", or nothing when unknown.
-    static func presence(onlineUntil: Date?, lastSeen: Date?, now: Date = .now) -> String? {
-        if let onlineUntil, onlineUntil > now {
+    static func presence(_ presence: some OnlinePresence, lastSeen: Date?, now: Date = .now) -> String? {
+        if presence.isOnline(at: now) {
             return String(localized: "Online now")
         }
         guard let lastSeen, lastSeen < now else { return nil }
