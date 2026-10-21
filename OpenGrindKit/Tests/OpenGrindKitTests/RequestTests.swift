@@ -28,6 +28,13 @@ struct RequestTests {
         #expect(items == [URLQueryItem(name: "exploreGeoHash", value: Geohash.coarsen("dr5regw3pg6f"))])
     }
 
+    @Test func idsCannotChangeTheRequestPath() async throws {
+        let transport = FakeTransport { _ in .json("{}") }
+        let api = GrindrAPI(transport: transport)
+        try await api.markRead("1:2", through: "x/../../v3/me?a=1#b")
+        #expect(transport.requests.first?.path == "/v4/chat/conversation/1:2/read/x%2F..%2F..%2Fv3%2Fme%3Fa=1%23b")
+    }
+
     @Test func filtersBecomeCascadeQueryItems() {
         var filters = BrowseFilters()
         filters.onlineOnly = true

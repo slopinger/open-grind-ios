@@ -194,7 +194,7 @@ public struct GrindrAPI: Sendable {
         if let pageKey { query.append(URLQueryItem(name: "pageKey", value: pageKey)) }
         return try await decode(
             MessagePage.self,
-            APIRequest(.get, "/v5/chat/conversation/\(conversationID)/message", query: query))
+            APIRequest(.get, "/v5/chat/conversation/\(conversationID.pathSegment)/message", query: query))
     }
 
     public func send(_ message: OutgoingMessage, to id: ProfileID) async throws -> Message {
@@ -213,22 +213,22 @@ public struct GrindrAPI: Sendable {
     /// Marks a conversation read up to and including `messageID`.
     public func markRead(_ conversationID: String, through messageID: String) async throws {
         try await perform(
-            APIRequest(.post, "/v4/chat/conversation/\(conversationID)/read/\(messageID)"))
+            APIRequest(.post, "/v4/chat/conversation/\(conversationID.pathSegment)/read/\(messageID.pathSegment)"))
     }
 
     /// Removes a conversation from your inbox; the other side keeps it.
     public func deleteConversation(_ conversationID: String) async throws {
-        try await perform(APIRequest(.delete, "/v4/chat/conversation/\(conversationID)"))
+        try await perform(APIRequest(.delete, "/v4/chat/conversation/\(conversationID.pathSegment)"))
     }
 
     public func setPinned(_ conversationID: String, _ isPinned: Bool) async throws {
         try await perform(
-            APIRequest(.post, "/v4/chat/conversation/\(conversationID)/\(isPinned ? "pin" : "unpin")"))
+            APIRequest(.post, "/v4/chat/conversation/\(conversationID.pathSegment)/\(isPinned ? "pin" : "unpin")"))
     }
 
     public func setMuted(_ conversationID: String, _ isMuted: Bool) async throws {
         try await perform(
-            APIRequest(.post, "/v1/push/conversation/\(conversationID)/\(isMuted ? "mute" : "unmute")"))
+            APIRequest(.post, "/v1/push/conversation/\(conversationID.pathSegment)/\(isMuted ? "mute" : "unmute")"))
     }
 
     /// Unsends a message for both sides.
@@ -290,5 +290,13 @@ private struct LossyProfiles<Element: Decodable>: Decodable {
 
     init(from decoder: any Decoder) throws {
         profiles = try decoder.container(keyedBy: CodingKeys.self).lossyArray(of: Element.self, forKey: .profiles)
+    }
+}
+
+extension String {
+    /// The string escaped as one path segment. IDs come from the server and
+    /// the websocket, and a `/`, `?` or `#` in one must not change the request.
+    fileprivate var pathSegment: String {
+        addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))) ?? ""
     }
 }
