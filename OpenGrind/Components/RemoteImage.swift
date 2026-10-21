@@ -45,6 +45,12 @@ struct RemoteImage: View {
                 loadedURL = nil
                 return
             }
+            // Shown from memory already; keep it without asking the pipeline again.
+            if cachesImages, let cached = pipeline.cachedImage(at: url, maxPixelSize: pixels) {
+                image = cached
+                loadedURL = url
+                return
+            }
             let loaded =
                 cachesImages
                 ? try? await pipeline.image(at: url, maxPixelSize: pixels)

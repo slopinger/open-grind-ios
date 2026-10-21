@@ -32,33 +32,42 @@ actor ImagePipeline {
 
     /// The image at `url` if it is decoded at this size already, to show it without waiting.
     nonisolated func cachedImage(at url: URL, maxPixelSize: Int) -> UIImage? {
-        memory.object(forKey: Self.memoryKey(Self.cacheKey(url), maxPixelSize))
+        memory.object(forKey: Self.memoryKey(Self.stableURL(url), maxPixelSize))
     }
 
     /// The image at `url`, scaled so its longer side is at most `maxPixelSize` pixels.
     func image(at url: URL, maxPixelSize: Int) async throws -> UIImage {
-        let fileName = Self.cacheKey(url)
-        let key = Self.memoryKey(fileName, maxPixelSize)
+        let stable = Self.stableURL(url)
+        let key = Self.memoryKey(stable, maxPixelSize)
         if let image = memory.object(forKey: key) { return image }
         if let task = inFlight[key as String] { return try await task.value.image }
 
-        let file = directory.appending(path: fileName)
+        let file = directory.appending(path: Self.fileName(stable))
         let transport = transport
-        let task = Task.detached(priority: .userInitiated) { () throws -> (image: UIImage, download: Data?) in
+        let task = Task.detached(priority: .userInitiated) { () throws -> (image: UIImage, written: URL?) in
             if let cached = try? Data(contentsOf: file) {
                 if let image = Self.downsample(cached, maxPixelSize: maxPixelSize) { return (image, nil) }
                 try? FileManager.default.removeItem(at: file)
             }
             let download = try await Self.download(url, from: transport)
-            return (try Self.decode(download, maxPixelSize: maxPixelSize), download)
+            let image = try Self.decode(download, maxPixelSize: maxPixelSize)
+            // Written beside the cache file here; the actor only moves it into place.
+            let partial = file.appendingPathExtension("partial-\(UUID().uuidString)")
+            let isWritten =
+                (try? download.write(to: partial, options: .completeFileProtectionUntilFirstUserAuthentication))
+                != nil
+            return (image, isWritten ? partial : nil)
         }
         inFlight[key as String] = task
         defer { if inFlight[key as String] == task { inFlight[key as String] = nil } }
         let generation = generation
-        let (image, download) = try await task.value
-        // Written here on the actor, so a sign-out in the meantime can't be undone by it.
-        guard generation == self.generation else { return image }
-        try? download?.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        let (image, written) = try await task.value
+        // A sign-out in the meantime deleted the cache; it must not come back.
+        guard generation == self.generation else {
+            if let written { try? FileManager.default.removeItem(at: written) }
+            return image
+        }
+        if let written { rename(written.path, file.path) }
         memory.setObject(
             image, forKey: key, cost: Int(image.size.width * image.size.height * image.scale * 4))
         return image
@@ -84,17 +93,19 @@ actor ImagePipeline {
         return image
     }
 
-    /// Signed CDN URLs change their query but not their path, so the cache
-    /// ignores the query.
-    private static func cacheKey(_ url: URL) -> String {
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        components?.query = nil
-        let stable = components?.string ?? url.absoluteString
-        return SHA256.hash(data: Data(stable.utf8)).map { String(format: "%02x", $0) }.joined()
+    /// Signed CDN URLs change their query but not their path, so the caches
+    /// ignore the query. Cheap, as it runs for every image on screen.
+    private static func stableURL(_ url: URL) -> Substring {
+        let string = url.absoluteString
+        return string.prefix { $0 != "?" && $0 != "#" }
     }
 
-    private static func memoryKey(_ fileName: String, _ maxPixelSize: Int) -> NSString {
-        "\(fileName)@\(maxPixelSize)" as NSString
+    private static func memoryKey(_ stableURL: Substring, _ maxPixelSize: Int) -> NSString {
+        "\(stableURL)@\(maxPixelSize)" as NSString
+    }
+
+    private static func fileName(_ stableURL: Substring) -> String {
+        SHA256.hash(data: Data(stableURL.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
     private static func downsample(_ data: Data, maxPixelSize: Int) -> UIImage? {
