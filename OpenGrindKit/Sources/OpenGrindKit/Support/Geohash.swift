@@ -10,39 +10,19 @@ public enum Geohash {
     public static func encode(latitude: Double, longitude: Double, precision: Int = precision)
         -> String
     {
-        var latitudeRange = (-90.0, 90.0)
-        var longitudeRange = (-180.0, 180.0)
+        // Bits alternate between longitude and latitude, longitude first; 5 bits per character.
+        let values = [longitude, latitude]
+        var ranges = [(-180.0, 180.0), (-90.0, 90.0)]
         var hash = ""
         var bits = 0
-        var bit = 0
-        var isLongitude = true
-
-        while hash.count < precision {
-            if isLongitude {
-                let mid = (longitudeRange.0 + longitudeRange.1) / 2
-                if longitude >= mid {
-                    bits = bits << 1 | 1
-                    longitudeRange.0 = mid
-                } else {
-                    bits <<= 1
-                    longitudeRange.1 = mid
-                }
-            } else {
-                let mid = (latitudeRange.0 + latitudeRange.1) / 2
-                if latitude >= mid {
-                    bits = bits << 1 | 1
-                    latitudeRange.0 = mid
-                } else {
-                    bits <<= 1
-                    latitudeRange.1 = mid
-                }
-            }
-            isLongitude.toggle()
-            bit += 1
-            if bit == 5 {
+        for index in 0..<(precision * 5) {
+            let axis = index % 2
+            let isUpper = values[axis] >= middle(ranges[axis])
+            bisect(&ranges[axis], keepingUpper: isUpper)
+            bits = bits << 1 | (isUpper ? 1 : 0)
+            if index % 5 == 4 {
                 hash.append(alphabet[bits])
                 bits = 0
-                bit = 0
             }
         }
         return hash
@@ -50,25 +30,22 @@ public enum Geohash {
 
     /// The center of a geohash cell, or `nil` if `hash` is not a geohash.
     public static func decode(_ hash: String) -> (latitude: Double, longitude: Double)? {
-        var latitudeRange = (-90.0, 90.0)
-        var longitudeRange = (-180.0, 180.0)
-        var isLongitude = true
-
+        var ranges = [(-180.0, 180.0), (-90.0, 90.0)]
+        var index = 0
         for character in hash.lowercased() {
-            guard let index = alphabet.firstIndex(of: character) else { return nil }
+            guard let value = alphabet.firstIndex(of: character) else { return nil }
             for shift in stride(from: 4, through: 0, by: -1) {
-                let isSet = (index >> shift) & 1 == 1
-                if isLongitude {
-                    let mid = (longitudeRange.0 + longitudeRange.1) / 2
-                    if isSet { longitudeRange.0 = mid } else { longitudeRange.1 = mid }
-                } else {
-                    let mid = (latitudeRange.0 + latitudeRange.1) / 2
-                    if isSet { latitudeRange.0 = mid } else { latitudeRange.1 = mid }
-                }
-                isLongitude.toggle()
+                bisect(&ranges[index % 2], keepingUpper: (value >> shift) & 1 == 1)
+                index += 1
             }
         }
-        return ((latitudeRange.0 + latitudeRange.1) / 2, (longitudeRange.0 + longitudeRange.1) / 2)
+        return (middle(ranges[1]), middle(ranges[0]))
+    }
+
+    private static func middle(_ range: (Double, Double)) -> Double { (range.0 + range.1) / 2 }
+
+    private static func bisect(_ range: inout (Double, Double), keepingUpper isUpper: Bool) {
+        if isUpper { range.0 = middle(range) } else { range.1 = middle(range) }
     }
 
     /// Snaps a geohash to a grid of 0.001° (about 110 m), as Open Grind does
