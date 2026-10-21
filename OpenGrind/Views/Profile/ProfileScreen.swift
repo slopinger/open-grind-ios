@@ -53,7 +53,7 @@ private struct ProfileContent: View {
             if let profile = model.profile {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        photos(profile)
+                        photos
                         ProfileDetails(profile: profile, catalogs: session.catalogs)
                             .padding(.horizontal)
                             .padding(.vertical, 20)
@@ -129,7 +129,7 @@ private struct ProfileContent: View {
     }
 
     @ViewBuilder
-    private func photos(_ profile: Profile) -> some View {
+    private var photos: some View {
         let photos = visiblePhotos
         Color.clear
             .aspectRatio(1, contentMode: .fit)

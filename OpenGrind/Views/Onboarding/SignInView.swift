@@ -46,9 +46,10 @@ struct SignInView: View {
                 if let failure {
                     Section {
                         Label {
+                            let text = Self.describe(failure)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(signInFailureTitle(failure)).font(.headline)
-                                Text(signInFailureMessage(failure)).foregroundStyle(.secondary)
+                                Text(text.title).font(.headline)
+                                Text(text.message).foregroundStyle(.secondary)
                             }
                         } icon: {
                             Image(systemName: "exclamationmark.triangle.fill")
@@ -102,17 +103,14 @@ struct SignInView: View {
         }
     }
 
-    private func signInFailureTitle(_ failure: Failure) -> String {
+    /// The usual wording, except that a refused sign-in is about what was typed.
+    private static func describe(_ failure: Failure) -> (title: String, message: String) {
         if case .grindr(.unauthorized) = failure {
-            return String(localized: "Wrong Email or Password")
+            return (
+                String(localized: "Wrong Email or Password"), String(localized: "Check your details and try again.")
+            )
         }
-        return FailureText(failure).title
-    }
-
-    private func signInFailureMessage(_ failure: Failure) -> String {
-        if case .grindr(.unauthorized) = failure {
-            return String(localized: "Check your details and try again.")
-        }
-        return FailureText(failure).message
+        let text = FailureText(failure)
+        return (text.title, text.message)
     }
 }

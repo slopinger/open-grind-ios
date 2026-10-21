@@ -208,7 +208,7 @@ private struct MessageBubble: View {
                     ? LocalizedStringKey("Albums aren't supported yet") : LocalizedStringKey("Shared privately"))
         case .unsupported(let kind):
             if kind == .image {
-                // A photo still being uploaded without a local copy.
+                // A photo whose address isn't one media is loaded from (see MediaURL).
                 ImagePlaceholder()
                     .frame(width: 220, height: 220)
                     .clipShape(.rect(cornerRadius: 18, style: .continuous))
