@@ -22,7 +22,7 @@ struct BrowseView: View {
                 }
                 .sheet(isPresented: $isShowingExplore) {
                     ExploreSheet(
-                        start: browse.exploring ?? browse.currentPlace, isExploring: browse.exploring != nil
+                        start: browse.exploring ?? browse.currentPlace, isAway: browse.exploring != nil
                     ) { place in
                         Task { await browse.explore(place) }
                     }

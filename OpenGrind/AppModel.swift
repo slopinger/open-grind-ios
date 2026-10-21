@@ -12,6 +12,7 @@ final class AppModel {
     private struct Setup {
         var account: AccountController
         var images: ImagePipeline
+        var location: LocationChoice
         var failure: Failure?
     }
 
@@ -19,6 +20,8 @@ final class AppModel {
 
     var account: AccountController { setup.account }
     var images: ImagePipeline { setup.images }
+    /// Your device's location or a place you chose instead, for everything sent to Grindr.
+    var locationChoice: LocationChoice { setup.location }
     /// The transport could not be set up; shown instead of the sign-in screen.
     var startupFailure: Failure? { setup.failure }
 
@@ -63,12 +66,13 @@ final class AppModel {
     private static func makeSetup(isDemo: Bool, keychain: KeychainStore, location: LocationService) -> Setup {
         if isDemo {
             let transport = DemoTransport(loadImage: loadDemoAvatar)
+            // A place chosen in the demo is not remembered, and the real one isn't used.
+            let choice = LocationChoice(device: FixedLocation(geohash: DemoTransport.geohash))
             let account = AccountController(
                 transport: transport,
                 credentials: InMemoryCredentialStore(credentials: DemoTransport.credentials),
-                location: FixedLocation(geohash: DemoTransport.geohash), preferences: DefaultsPreferenceStore(),
-                isDemo: true)
-            return Setup(account: account, images: ImagePipeline(transport: transport))
+                location: choice.location, preferences: DefaultsPreferenceStore(), isDemo: true)
+            return Setup(account: account, images: ImagePipeline(transport: transport), location: choice)
         }
 
         let device: String
@@ -100,11 +104,13 @@ final class AppModel {
             }
         }
         transport.onDeviceRotated = { [keychain] device in keychain.device = device }
+        let preferences = DefaultsPreferenceStore()
+        let choice = LocationChoice(device: location, preferences: preferences)
         let account = AccountController(
-            transport: transport, credentials: keychain, location: location, preferences: DefaultsPreferenceStore())
+            transport: transport, credentials: keychain, location: choice.location, preferences: preferences)
         let images = ImagePipeline(transport: transport)
         account.onSignOut = { await images.removeAll() }
-        return Setup(account: account, images: images)
+        return Setup(account: account, images: images, location: choice)
     }
 
     /// A demo avatar from DiceBear, which serves about ten PNGs a second and

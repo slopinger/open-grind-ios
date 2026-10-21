@@ -2,10 +2,20 @@ import MapKit
 import OpenGrindKit
 import SwiftUI
 
-/// A map for choosing a place to look around: search for a city, tap the map
-/// or drag the pin, then explore. Your own location stays where it is.
+/// A map for choosing a place: search for a city, tap the map or drag the pin.
+/// Either to look around there while your profile stays where you are, or to
+/// appear there instead of where you are (``LocationChoice``).
 struct ExploreSheet: View {
-    let isExploring: Bool
+    enum Purpose {
+        /// Browse another place; your profile stays.
+        case explore
+        /// Appear at the place: your profile and your grid move there.
+        case appearHere
+    }
+
+    let purpose: Purpose
+    /// Exploring, or appearing at a chosen place: offers going back to where you are.
+    let isAway: Bool
     let explore: (ExplorePlace?) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -21,14 +31,20 @@ struct ExploreSheet: View {
     /// Where the camera is, to search near it.
     @State private var visibleRegion: MKCoordinateRegion?
 
-    /// - Parameter start: Where the pin starts: the place you are exploring, or where you are.
-    init(start: ExplorePlace?, isExploring: Bool, explore: @escaping (ExplorePlace?) -> Void) {
-        self.isExploring = isExploring
+    /// - Parameters:
+    ///   - start: Where the pin starts: the place chosen before, or where you are.
+    ///   - explore: Called with the chosen place, or `nil` to go back to where you are.
+    init(
+        _ purpose: Purpose = .explore, start: ExplorePlace?, isAway: Bool,
+        explore: @escaping (ExplorePlace?) -> Void
+    ) {
+        self.purpose = purpose
+        self.isAway = isAway
         self.explore = explore
         let coordinate = start.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
         _pin = State(initialValue: coordinate)
-        _placeName = State(initialValue: isExploring ? start?.name : nil)
-        _namedPin = State(initialValue: isExploring && start?.name != nil ? coordinate.map(PinKey.init) : nil)
+        _placeName = State(initialValue: isAway ? start?.name : nil)
+        _namedPin = State(initialValue: isAway && start?.name != nil ? coordinate.map(PinKey.init) : nil)
         _position = State(initialValue: coordinate.map(Self.camera(around:)) ?? .automatic)
     }
 
@@ -45,7 +61,7 @@ struct ExploreSheet: View {
                 Map(position: $position) {
                     UserAnnotation()
                     if let pin {
-                        Annotation("Explore Here", coordinate: pin, anchor: .bottom) {
+                        Annotation(actionTitle, coordinate: pin, anchor: .bottom) {
                             PinView(isLifted: isDragging)
                                 .gesture(
                                     DragGesture(minimumDistance: 0, coordinateSpace: .global)
@@ -77,7 +93,7 @@ struct ExploreSheet: View {
                 .onMapCameraChange(frequency: .onEnd) { visibleRegion = $0.region }
             }
             .safeAreaInset(edge: .bottom) { panel }
-            .navigationTitle("Explore")
+            .navigationTitle(purpose == .explore ? Text("Explore") : Text("Your Location"))
             .navigationBarTitleDisplayMode(.inline)
             .searchable(
                 text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for a City"
@@ -152,7 +168,7 @@ struct ExploreSheet: View {
                 explore(ExplorePlace(latitude: pin.latitude, longitude: pin.longitude, name: placeName))
                 dismiss()
             } label: {
-                Label("Explore Here", systemImage: "binoculars.fill")
+                Label(actionTitle, systemImage: purpose == .explore ? "binoculars.fill" : "mappin.and.ellipse")
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 38)
             }
@@ -161,21 +177,43 @@ struct ExploreSheet: View {
             .controlSize(.large)
             .disabled(pin == nil)
 
-            if isExploring {
-                Button("Back to My Location", systemImage: "location.fill") {
+            if isAway {
+                Button(backTitle, systemImage: "location.fill") {
                     explore(nil)
                     dismiss()
                 }
                 .font(.subheadline.weight(.semibold))
             }
 
-            Text("Drag the pin or tap the map to move it. Your profile stays where you are.")
+            Text(footnote)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
         .padding()
         .background(.bar)
+    }
+
+    private var actionTitle: LocalizedStringKey {
+        switch purpose {
+        case .explore: "Explore Here"
+        case .appearHere: "Appear Here"
+        }
+    }
+
+    private var backTitle: LocalizedStringKey {
+        switch purpose {
+        case .explore: "Back to My Location"
+        case .appearHere: "Use My Current Location"
+        }
+    }
+
+    private var footnote: LocalizedStringKey {
+        switch purpose {
+        case .explore: "Drag the pin or tap the map to move it. Your profile stays where you are."
+        case .appearHere:
+            "Drag the pin or tap the map to move it. Grindr sees you and your profile here instead of where you are, until you switch back."
+        }
     }
 
     private func select(_ result: PlaceResult) {

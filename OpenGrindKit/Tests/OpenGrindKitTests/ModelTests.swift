@@ -217,6 +217,33 @@ struct ModelTests {
 
     // MARK: Browse
 
+    @Test func aChosenPlaceIsWhereGrindrSeesYou() async throws {
+        struct DeviceNeverAsked: LocationProviding {
+            func currentGeohash() async throws -> String {
+                Issue.record("the device was asked for its location")
+                throw LocationError.unavailable
+            }
+        }
+        let defaults = try #require(UserDefaults(suiteName: "ModelTests.\(UUID().uuidString)"))
+        let preferences = DefaultsPreferenceStore(defaults: defaults)
+        let transport = FakeTransport { _ in .json(#"{"items":[],"nextPage":null}"#) }
+        let berlin = ExplorePlace(latitude: 52.52, longitude: 13.405, name: "Berlin")
+        let choice = LocationChoice(device: DeviceNeverAsked(), preferences: preferences)
+        choice.choose(berlin)
+        let session = AccountSession(profileID: 1, api: GrindrAPI(transport: transport), location: choice.location)
+
+        await session.locationChanged()
+        let geohash = Geohash.coarsen(berlin.geohash)
+        let location = try #require(transport.requests.first { $0.path == "/v4/location" })
+        #expect(location.method == .put && location.body == .json(Data(#"{"geohash":"\#(geohash)"}"#.utf8)))
+        let cascade = try #require(transport.requests.first { $0.path.hasPrefix("/v4/cascade") })
+        #expect(URLComponents(string: cascade.path)?.queryItems?.first?.value == geohash)
+
+        #expect(LocationChoice(device: DeviceNeverAsked(), preferences: preferences).place == berlin, "remembered")
+        choice.choose(nil)
+        #expect(preferences.chosenPlace() == nil)
+    }
+
     @Test func browseReportsLocationProblems() async {
         struct NoLocation: LocationProviding {
             func currentGeohash() async throws -> String { throw LocationError.denied }

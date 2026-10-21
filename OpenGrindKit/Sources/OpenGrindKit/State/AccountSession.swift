@@ -72,6 +72,15 @@ public final class AccountSession {
         lastLocationUpdate = .now
     }
 
+    /// Your location changed, e.g. to a place you chose (``LocationChoice``):
+    /// moves your profile there at once and reloads the grid around it.
+    public func locationChanged() async {
+        lastLocationUpdate = nil
+        async let moved: Void = updateLocationIfNeeded()
+        async let grid: Void = browse.refresh()
+        _ = await (moved, grid)
+    }
+
     // MARK: Chats
 
     /// The chat with `profileID`, shared across screens so drafts and loaded

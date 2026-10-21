@@ -219,8 +219,9 @@ public enum BrowseArea: Hashable, Sendable {
     case exploring(geohash: String)
 }
 
-/// A place to browse other than where you are.
-public struct ExplorePlace: Hashable, Sendable {
+/// A place on the map: one to browse other than where you are, or one to
+/// appear at instead (``LocationChoice``).
+public struct ExplorePlace: Hashable, Sendable, Codable {
     public var latitude: Double
     public var longitude: Double
     /// What to call the place, e.g. a city from reverse geocoding.
