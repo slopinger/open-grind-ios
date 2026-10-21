@@ -305,12 +305,10 @@ private struct MessageBubble: View {
 
 /// A photo you are sending, from its local copy.
 private struct LocalPhoto: View {
-    /// Kept across updates: a new `UIImage` each time would be decoded from the JPEG again.
+    let data: Data
+    /// Made once, when the row appears: `State(initialValue:)` would still build an image
+    /// from the JPEG on every update of the chat, only to throw it away.
     @State private var image: UIImage?
-
-    init(data: Data) {
-        _image = State(initialValue: UIImage(data: data))
-    }
 
     var body: some View {
         Group {
@@ -325,5 +323,6 @@ private struct LocalPhoto: View {
             }
         }
         .clipShape(.rect(cornerRadius: 18, style: .continuous))
+        .task { if image == nil { image = UIImage(data: data) } }
     }
 }
