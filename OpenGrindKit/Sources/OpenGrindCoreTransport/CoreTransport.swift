@@ -141,6 +141,10 @@ public final class CoreTransport: GrindrTransport, @unchecked Sendable {
 }
 
 /// Receives the Rust client's callbacks (on its own threads) and forwards them.
+///
+/// The handler runs inside the lock, so events reach it one at a time and in
+/// order, the backlog first. It only queues the event (``AccountController``
+/// yields it to a stream) and must not call back into the transport.
 private final class Listener: CoreListener, @unchecked Sendable {
     private let lock = NSLock()
     private var handler: (@Sendable (TransportEvent) -> Void)?
@@ -148,27 +152,17 @@ private final class Listener: CoreListener, @unchecked Sendable {
     private var backlog: [TransportEvent] = []
 
     func setHandler(_ handler: @escaping @Sendable (TransportEvent) -> Void) {
-        // Events that arrive while the backlog is replayed join it, so they come after the older ones.
-        while true {
-            let pending: [TransportEvent]? = lock.withLock {
-                if backlog.isEmpty {
-                    self.handler = handler
-                    return nil
-                }
-                defer { backlog = [] }
-                return backlog
-            }
-            guard let pending else { return }
-            pending.forEach(handler)
+        lock.withLock {
+            for event in backlog { handler(event) }
+            backlog = []
+            self.handler = handler
         }
     }
 
     private func emit(_ event: TransportEvent) {
-        let handler = lock.withLock {
-            if self.handler == nil { backlog.append(event) }
-            return self.handler
+        lock.withLock {
+            if let handler { handler(event) } else { backlog.append(event) }
         }
-        handler?(event)
     }
 
     func credentialsChanged(credentialsJson: String?) {
