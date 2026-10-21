@@ -115,7 +115,7 @@ private struct ChatContent: View {
         return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 2) {
-                    if chat.didFailLoadingOlder {
+                    if chat.olderState.failure != nil {
                         Button("Load Earlier Messages") { Task { await chat.loadOlder() } }
                             .padding()
                     } else if chat.hasOlderMessages {
