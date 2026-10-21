@@ -58,7 +58,8 @@ private struct ChatContent: View {
                 }
             }
             .fullScreenCover(item: $viewer) { item in
-                PhotoViewer(urls: [item.url], selection: 0, storesOnDisk: !item.isViewOnce)
+                PhotoViewer(urls: [item.url], selection: 0)
+                    .environment(\.cachesImages, !item.isViewOnce)
             }
             .failureAlert($chat.actionFailure)
     }

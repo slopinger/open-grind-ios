@@ -68,6 +68,8 @@ public struct MediaPayload: Sendable, Hashable {
         self.contentType = contentType
         self.data = data
     }
+
+    public var isSuccess: Bool { (200..<300).contains(status) }
 }
 
 /// An account restriction that comes with an otherwise valid session.

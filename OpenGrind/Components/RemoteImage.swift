@@ -8,10 +8,9 @@ struct RemoteImage: View {
     /// The longest side, in points, the image is shown at.
     var pointSize: CGFloat = 200
     var contentMode: ContentMode = .fill
-    /// False for view-once photos, which must not be kept anywhere.
-    var storesOnDisk = true
 
     @Environment(\.imagePipeline) private var pipeline
+    @Environment(\.cachesImages) private var cachesImages
     @Environment(\.displayScale) private var displayScale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var image: UIImage?
@@ -24,7 +23,7 @@ struct RemoteImage: View {
         let shown: UIImage? =
             if loadedURL == url {
                 image
-            } else if storesOnDisk {
+            } else if cachesImages {
                 url.flatMap { pipeline?.cachedImage(at: $0, maxPixelSize: pixels) }
             } else {
                 nil
@@ -46,7 +45,11 @@ struct RemoteImage: View {
                 loadedURL = nil
                 return
             }
-            if let loaded = try? await pipeline.image(at: url, maxPixelSize: pixels, storesOnDisk: storesOnDisk) {
+            let loaded =
+                cachesImages
+                ? try? await pipeline.image(at: url, maxPixelSize: pixels)
+                : try? await pipeline.uncachedImage(at: url, maxPixelSize: pixels)
+            if let loaded {
                 image = loaded
                 loadedURL = url
             }

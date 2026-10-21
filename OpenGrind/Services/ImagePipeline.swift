@@ -36,36 +36,22 @@ actor ImagePipeline {
     }
 
     /// The image at `url`, scaled so its longer side is at most `maxPixelSize` pixels.
-    ///
-    /// With `storesOnDisk` false, e.g. for view-once photos, the image is kept
-    /// nowhere: not on disk and not in memory.
-    func image(at url: URL, maxPixelSize: Int, storesOnDisk: Bool = true) async throws -> UIImage {
+    func image(at url: URL, maxPixelSize: Int) async throws -> UIImage {
         let fileName = Self.cacheKey(url)
         let key = Self.memoryKey(fileName, maxPixelSize)
-        if storesOnDisk, let image = memory.object(forKey: key) { return image }
-        if storesOnDisk, let task = inFlight[key as String] { return try await task.value.image }
+        if let image = memory.object(forKey: key) { return image }
+        if let task = inFlight[key as String] { return try await task.value.image }
 
         let file = directory.appending(path: fileName)
         let transport = transport
         let task = Task.detached(priority: .userInitiated) { () throws -> (image: UIImage, download: Data?) in
-            let cached = storesOnDisk ? try? Data(contentsOf: file) : nil
-            var download: Data?
-            if cached == nil {
-                let media = try await transport.fetchMedia(at: url, maxBytes: Self.maxDownloadBytes)
-                guard (200..<300).contains(media.status) else {
-                    throw GrindrError.server(status: media.status, code: nil, message: nil)
-                }
-                download = media.data
+            if let cached = try? Data(contentsOf: file) {
+                if let image = Self.downsample(cached, maxPixelSize: maxPixelSize) { return (image, nil) }
+                try? FileManager.default.removeItem(at: file)
             }
-            guard let data = cached ?? download, let image = Self.downsample(data, maxPixelSize: maxPixelSize)
-            else {
-                if cached != nil { try? FileManager.default.removeItem(at: file) }
-                throw GrindrError.invalidResponse("not an image")
-            }
-            return (image, download)
+            let download = try await Self.download(url, from: transport)
+            return (try Self.decode(download, maxPixelSize: maxPixelSize), download)
         }
-        guard storesOnDisk else { return try await task.value.image }
-
         inFlight[key as String] = task
         defer { if inFlight[key as String] == task { inFlight[key as String] = nil } }
         let generation = generation
@@ -75,6 +61,26 @@ actor ImagePipeline {
         try? download?.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         memory.setObject(
             image, forKey: key, cost: Int(image.size.width * image.size.height * image.scale * 4))
+        return image
+    }
+
+    /// The image at `url`, kept nowhere: not on disk and not in memory. For
+    /// view-once photos.
+    @concurrent
+    nonisolated func uncachedImage(at url: URL, maxPixelSize: Int) async throws -> UIImage {
+        try Self.decode(try await Self.download(url, from: transport), maxPixelSize: maxPixelSize)
+    }
+
+    private static func download(_ url: URL, from transport: any GrindrTransport) async throws -> Data {
+        let media = try await transport.fetchMedia(at: url, maxBytes: maxDownloadBytes)
+        guard media.isSuccess else { throw GrindrError.server(status: media.status, code: nil, message: nil) }
+        return media.data
+    }
+
+    private static func decode(_ data: Data, maxPixelSize: Int) throws -> UIImage {
+        guard let image = downsample(data, maxPixelSize: maxPixelSize) else {
+            throw GrindrError.invalidResponse("not an image")
+        }
         return image
     }
 
@@ -133,4 +139,6 @@ actor ImagePipeline {
 
 extension EnvironmentValues {
     @Entry var imagePipeline: ImagePipeline? = nil
+    /// False where images must not be kept anywhere, such as view-once photos.
+    @Entry var cachesImages = true
 }
