@@ -22,6 +22,9 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
     private let replyDelay: Duration
     private let lock = NSLock()
     private var handler: (@Sendable (TransportEvent) -> Void)?
+    /// One download per avatar, shared by every size and screen: DiceBear only
+    /// serves about ten images a second.
+    private var avatars: [String: Task<Data, any Error>] = [:]
 
     public init(now: Date = .now, replyDelay: Duration = .seconds(2), loadImage: ImageLoader? = nil) {
         world = DemoWorld(now: now)
@@ -61,14 +64,24 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
         guard let seed = await world.photoSeed(for: hash), let loadImage else {
             return MediaPayload(status: 404, data: Data())
         }
-        let size = url.path.contains("thumb") ? 320 : 1024
-        let colors = ["b6e3f4", "c0aede", "d1d4f9", "ffd5dc", "ffdfbf", "c7f0d8"]
-        let color = colors[seed.utf8.reduce(0) { $0 &+ Int($1) } % colors.count]
-        let avatar = URL(
-            string:
-                "https://api.dicebear.com/9.x/notionists/png?seed=\(seed)&size=\(size)&backgroundColor=\(color)"
-        )!
-        return MediaPayload(status: 200, contentType: "image/png", data: try await loadImage(avatar))
+        let download = lock.withLock {
+            if let download = avatars[seed] { return download }
+            // One size for thumbnails and full photos alike; the app scales it down.
+            let colors = ["b6e3f4", "c0aede", "d1d4f9", "ffd5dc", "ffdfbf", "c7f0d8"]
+            let color = colors[seed.utf8.reduce(0) { $0 &+ Int($1) } % colors.count]
+            let avatar = URL(
+                string: "https://api.dicebear.com/9.x/notionists/png?seed=\(seed)&size=1024&backgroundColor=\(color)"
+            )!
+            let download = Task { try await loadImage(avatar) }
+            avatars[seed] = download
+            return download
+        }
+        do {
+            return MediaPayload(status: 200, contentType: "image/png", data: try await download.value)
+        } catch {
+            lock.withLock { avatars[seed] = nil }
+            throw error
+        }
     }
 
     // MARK: REST
