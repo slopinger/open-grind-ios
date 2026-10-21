@@ -70,7 +70,7 @@ public final class AccountController {
 
     /// Signs in, tagging the sign-in with your location when it is available.
     public func signIn(email: String, password: String) async throws {
-        let geohash = try? await location.currentGeohash()
+        let geohash = await quickGeohash()
         let result = try await transport.signIn(
             email: email.trimmingCharacters(in: .whitespacesAndNewlines), password: password,
             geohash: geohash.map(Geohash.coarsen))
@@ -90,6 +90,23 @@ public final class AccountController {
     public func setActive(_ isActive: Bool) {
         transport.setActive(isActive)
         if isActive { session?.becameActive() }
+    }
+
+    /// Your location if it comes within a few seconds: a fix can take much
+    /// longer indoors, and the sign-in shouldn't wait for an optional tag.
+    private func quickGeohash() async -> String? {
+        let (first, continuation) = AsyncStream.makeStream(of: String?.self)
+        Task { [location] in
+            continuation.yield(try? await location.currentGeohash())
+            continuation.finish()
+        }
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            continuation.yield(nil)
+            continuation.finish()
+        }
+        var answers = first.makeAsyncIterator()
+        return await answers.next() ?? nil
     }
 
     private func startSession(profileID: ProfileID) {

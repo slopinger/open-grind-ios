@@ -238,6 +238,23 @@ struct ModelTests {
         #expect(account.signedOutReason == nil)
     }
 
+    @Test func signingInDoesNotWaitLongForALocation() async throws {
+        struct NoFix: LocationProviding {
+            func currentGeohash() async throws -> String {
+                try await Task.sleep(for: .seconds(60))
+                return "u33dc0cppvbz"
+            }
+        }
+        let transport = FakeTransport()
+        transport.signInResult = SignInResult(profileID: 77)
+        let account = AccountController(
+            transport: transport, credentials: InMemoryCredentialStore(), location: NoFix())
+        let started = ContinuousClock.now
+        try await account.signIn(email: "ada@example.com", password: "secret")
+        #expect(account.session?.profileID == 77)
+        #expect(ContinuousClock.now - started < .seconds(10))
+    }
+
     @Test func storedCredentialsResumeTheSession() {
         let store = InMemoryCredentialStore(credentials: #"{"profile_id":"5","auth_token":"t"}"#)
         let account = AccountController(
