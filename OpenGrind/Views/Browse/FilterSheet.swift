@@ -34,21 +34,16 @@ struct FilterSheet: View {
 
                 Section("Height") {
                     RangePicker(
-                        id: "height", range: heightRange,
-                        bounds: Int(
-                            BrowseFilters.heightBounds.lowerBound)...Int(BrowseFilters.heightBounds.upperBound),
-                        values: Array(stride(from: 121, through: 241, by: 2)), openWheel: $openWheel
+                        id: "height", range: whole($filters.heights), bounds: whole(BrowseFilters.heightBounds),
+                        values: MeasurementOptions.centimeters, openWheel: $openWheel
                     ) { Text(Formatting.height(Double($0))) }
                 }
 
                 Section("Weight") {
                     RangePicker(
-                        id: "weight", range: weightRange,
-                        bounds: Int(
-                            BrowseFilters.weightBounds.lowerBound / 1000)...Int(
-                                BrowseFilters.weightBounds.upperBound / 1000),
-                        values: Array(stride(from: 40, through: 272, by: 2)), openWheel: $openWheel
-                    ) { Text(Formatting.weight(Double($0) * 1000)) }
+                        id: "weight", range: whole($filters.weights), bounds: whole(BrowseFilters.weightBounds),
+                        values: MeasurementOptions.grams, openWheel: $openWheel
+                    ) { Text(Formatting.weight(Double($0))) }
                 }
 
                 Section("Details") {
@@ -89,29 +84,18 @@ struct FilterSheet: View {
         .onDisappear { apply(filters) }
     }
 
-    /// Heights in whole centimeters.
-    private var heightRange: Binding<ClosedRange<Int>> {
+    /// Centimeters or grams as whole numbers, for the wheels. The bounds are whole
+    /// numbers too, so "Any" maps back to them exactly.
+    private func whole(_ range: Binding<ClosedRange<Double>>) -> Binding<ClosedRange<Int>> {
         Binding {
-            Int(filters.heights.lowerBound.rounded())...Int(filters.heights.upperBound.rounded())
-        } set: { range in
-            filters.heights = Double(range.lowerBound)...Double(range.upperBound)
+            whole(range.wrappedValue)
+        } set: {
+            range.wrappedValue = Double($0.lowerBound)...Double($0.upperBound)
         }
     }
 
-    /// Weights in whole kilograms; the outer bounds map back to the exact limits.
-    private var weightRange: Binding<ClosedRange<Int>> {
-        let bounds = BrowseFilters.weightBounds
-        return Binding {
-            Int(filters.weights.lowerBound / 1000)...Int(filters.weights.upperBound / 1000)
-        } set: { range in
-            let lower =
-                range.lowerBound == Int(bounds.lowerBound / 1000)
-                ? bounds.lowerBound : Double(range.lowerBound) * 1000
-            let upper =
-                range.upperBound == Int(bounds.upperBound / 1000)
-                ? bounds.upperBound : Double(range.upperBound) * 1000
-            filters.weights = lower...upper
-        }
+    private func whole(_ range: ClosedRange<Double>) -> ClosedRange<Int> {
+        Int(range.lowerBound.rounded())...Int(range.upperBound.rounded())
     }
 }
 
@@ -168,6 +152,6 @@ private struct RangePicker: View {
         if value <= bounds.lowerBound { return bounds.lowerBound }
         if value >= bounds.upperBound { return bounds.upperBound }
         let options = values.filter { isLower ? $0 > bounds.lowerBound : $0 < bounds.upperBound }
-        return options.min { abs($0 - value) < abs($1 - value) } ?? value
+        return MeasurementOptions.nearest(to: Double(value), in: options)
     }
 }
