@@ -7,7 +7,8 @@ import UIKit
 /// Loads, caches and downsamples media from Grindr's CDN.
 ///
 /// Downloads go through the transport, so they carry the same network
-/// fingerprint as the official app. Files are kept on disk for a week and
+/// fingerprint as the official app. Files are kept on disk for a week (at most
+/// 200 MB) and
 /// decoded images in memory, scaled to the size they are shown at.
 actor ImagePipeline {
     static let maxDownloadBytes = 25 * 1024 * 1024
@@ -26,7 +27,7 @@ actor ImagePipeline {
         directory = URL.cachesDirectory.appending(path: "Media", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         Task.detached(priority: .background) { [directory] in
-            Self.removeFiles(in: directory, olderThan: 7 * 86_400)
+            Self.removeFiles(in: directory, olderThan: 7 * 86_400, beyond: 200 * 1024 * 1024)
         }
     }
 
@@ -124,15 +125,21 @@ actor ImagePipeline {
         return UIImage(cgImage: image)
     }
 
-    private static func removeFiles(in directory: URL, olderThan age: TimeInterval) {
+    /// Deletes files older than `age`, then the oldest ones until the rest fit in `maxBytes`.
+    private static func removeFiles(in directory: URL, olderThan age: TimeInterval, beyond maxBytes: Int) {
         let manager = FileManager.default
+        let keys: Set<URLResourceKey> = [.contentModificationDateKey, .totalFileAllocatedSizeKey]
         let files =
-            (try? manager.contentsOfDirectory(
-                at: directory, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
-        for file in files {
-            let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
-                .contentModificationDate
-            if let modified, modified.timeIntervalSinceNow < -age {
+            (try? manager.contentsOfDirectory(at: directory, includingPropertiesForKeys: Array(keys))) ?? []
+        let newestFirst = files.map { file in
+            let values = try? file.resourceValues(forKeys: keys)
+            return (file, values?.contentModificationDate ?? .distantPast, values?.totalFileAllocatedSize ?? 0)
+        }
+        .sorted { $0.1 > $1.1 }
+        var kept = 0
+        for (file, modified, size) in newestFirst {
+            kept += size
+            if modified.timeIntervalSinceNow < -age || kept > maxBytes {
                 try? manager.removeItem(at: file)
             }
         }

@@ -66,7 +66,7 @@ Only email and password. Other methods were looked into:
 - Photos you send or upload are re-encoded, which removes EXIF data such as where they were taken.
 - While you explore, the grid sends the explored place instead of your location, rounded the same
   way; place search and names come from Apple Maps.
-- Photos are cached for a week and removed when you sign out. No analytics, no crash reporting.
+- Photos are cached for a week (at most 200 MB) and removed when you sign out. No analytics, no crash reporting.
 
 ## How it works
 
