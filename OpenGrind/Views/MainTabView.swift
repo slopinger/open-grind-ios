@@ -35,7 +35,6 @@ struct MainTabView: View {
                 MeView()
             }
         }
-        .modifier(TabBarMinimizesOnScroll())
         .task {
             // Fill the badges right away; your profile has the gender and pronoun names.
             async let inbox: Void = session.inbox.loadIfNeeded()
@@ -73,17 +72,6 @@ struct MainTabView: View {
             String(localized: "Grindr's safety checks flagged this account. Contact Grindr support.")
         case .other(let detail):
             String(localized: "Grindr limited this account: \(detail)")
-        }
-    }
-}
-
-/// On iOS 26, the tab bar gets out of the way while scrolling, as in Apple's apps.
-private struct TabBarMinimizesOnScroll: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26, *) {
-            content.tabBarMinimizeBehavior(.onScrollDown)
-        } else {
-            content
         }
     }
 }
