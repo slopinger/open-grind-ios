@@ -191,17 +191,14 @@ public final class InboxModel {
             if message.retractedMessageID == nil { scheduleRefresh() }
             return
         }
-        // Reactions and unsends arrive as updates of older messages.
-        guard message.date >= conversations[index].lastActivity || message.retractedMessageID != nil
-        else {
-            return
-        }
         if let retracted = message.retractedMessageID {
             if conversations[index].preview?.messageID == retracted {
                 conversations[index].preview?.isUnsent = true
             }
             return
         }
+        // Reactions arrive as updates of older messages.
+        guard message.date >= conversations[index].lastActivity else { return }
         // The same message again, e.g. delivered twice around a reconnect.
         let isRepeat = conversations[index].preview?.messageID == message.id
         conversations[index].lastActivity = message.date

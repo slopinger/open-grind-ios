@@ -45,10 +45,6 @@ public struct ProfileTagCatalog: Hashable, Sendable {
         keysByText = Dictionary(tags.map { ($0.text, $0.key) }, uniquingKeysWith: { first, _ in first })
     }
 
-    public static func == (lhs: Self, rhs: Self) -> Bool { lhs.categories == rhs.categories }
-
-    public func hash(into hasher: inout Hasher) { hasher.combine(categories) }
-
     public func tag(forKey key: String) -> ProfileTag? { tagsByKey[key] }
 
     /// The key for a tag as a profile carries it: profiles carry either the key or
