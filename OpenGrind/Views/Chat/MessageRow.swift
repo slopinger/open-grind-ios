@@ -245,7 +245,7 @@ private struct MessageBubble: View {
         .accessibilityLabel(opensViewer ? "Photo" : "GIF")
     }
 
-    private static func ratio(_ width: Int?, _ height: Int?) -> CGFloat {
+    fileprivate static func ratio(_ width: Int?, _ height: Int?) -> CGFloat {
         guard let width, let height, width > 0, height > 0 else { return 1 }
         // Very tall images are cropped rather than filling the screen.
         return max(CGFloat(width) / CGFloat(height), 2 / 3)
@@ -306,9 +306,10 @@ private struct MessageBubble: View {
 /// A photo you are sending, from its local copy.
 private struct LocalPhoto: View {
     let data: Data
-    /// Made once, when the row appears: `State(initialValue:)` would still build an image
-    /// from the JPEG on every update of the chat, only to throw it away.
+    /// Made once, when the row appears, at the bubble's size and off the main thread.
     @State private var image: UIImage?
+
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         Group {
@@ -316,13 +317,22 @@ private struct LocalPhoto: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 220, height: 220 * min(image.size.height / max(image.size.width, 1), 1.5))
+                    .frame(
+                        width: 220,
+                        height: 220 / MessageBubble.ratio(Int(image.size.width), Int(image.size.height)))
             } else {
                 ImagePlaceholder()
                     .frame(width: 220, height: 220)
             }
         }
         .clipShape(.rect(cornerRadius: 18, style: .continuous))
-        .task { if image == nil { image = UIImage(data: data) } }
+        .task {
+            guard image == nil else { return }
+            // The bubble is 220 points wide and at most 1.5 times as tall.
+            let pixels = Int(330 * displayScale)
+            image = await Task.detached(priority: .userInitiated) { [data] in
+                Thumbnail.make(from: data, maxPixelSize: pixels).map(UIImage.init(cgImage:))
+            }.value
+        }
     }
 }

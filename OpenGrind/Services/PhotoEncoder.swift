@@ -19,15 +19,7 @@ enum PhotoEncoder {
 
     @concurrent
     static func jpeg(from data: Data) async -> JPEGPhoto? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-        let options: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
-        ]
-        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
-            return nil
-        }
+        guard let image = Thumbnail.make(from: data, maxPixelSize: maxPixelSize) else { return nil }
         let output = NSMutableData()
         guard
             let destination = CGImageDestinationCreateWithData(

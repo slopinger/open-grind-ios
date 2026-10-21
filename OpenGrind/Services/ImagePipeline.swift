@@ -1,5 +1,4 @@
 import CryptoKit
-import ImageIO
 import OpenGrindKit
 import SwiftUI
 import UIKit
@@ -110,19 +109,7 @@ actor ImagePipeline {
     }
 
     private static func downsample(_ data: Data, maxPixelSize: Int) -> UIImage? {
-        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
-            return nil
-        }
-        let options =
-            [
-                kCGImageSourceCreateThumbnailFromImageAlways: true,
-                kCGImageSourceCreateThumbnailWithTransform: true,
-                kCGImageSourceShouldCacheImmediately: true,
-                kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
-            ] as CFDictionary
-        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options) else { return nil }
-        return UIImage(cgImage: image)
+        Thumbnail.make(from: data, maxPixelSize: maxPixelSize).map(UIImage.init(cgImage:))
     }
 
     /// Deletes files older than `age`, then the oldest ones until the rest fit in `maxBytes`.
