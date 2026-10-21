@@ -145,7 +145,7 @@ private struct BrowseBar: View {
                     Image(systemName: place == nil ? "magnifyingglass" : "binoculars.fill")
                         .foregroundStyle(place == nil ? Color.secondary : Color.brand)
                     if let place {
-                        Text(place.name ?? String(localized: "Selected Place"))
+                        Text(Formatting.place(place.name))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                     } else {
@@ -164,7 +164,7 @@ private struct BrowseBar: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(
-                place.map { Text("Exploring \($0.name ?? String(localized: "Selected Place"))") }
+                place.map { Text("Exploring \(Formatting.place($0.name))") }
                     ?? Text("Explore Another Place")
             )
             .accessibilityHint("Opens a map to choose a place.")

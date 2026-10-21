@@ -9,6 +9,11 @@ enum Formatting {
         return displayName
     }
 
+    /// A place's name, or "Selected Place" while Apple Maps hasn't named it.
+    static func place(_ name: String?) -> String {
+        name ?? String(localized: "Selected Place")
+    }
+
     /// "350 m" / "1.2 km" (or feet and miles), "Nearby" under 100 m, "~" when approximate.
     static func distance(_ meters: Double?, approximate: Bool = false) -> String? {
         guard let meters, meters >= 0 else { return nil }

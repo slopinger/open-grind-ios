@@ -5,8 +5,6 @@ import SwiftUI
 /// A map for choosing a place to look around: search for a city, tap the map
 /// or drag the pin, then explore. Your own location stays where it is.
 struct ExploreSheet: View {
-    /// Where the pin starts: the place you are exploring, or where you are.
-    let start: ExplorePlace?
     let isExploring: Bool
     let explore: (ExplorePlace?) -> Void
 
@@ -14,8 +12,7 @@ struct ExploreSheet: View {
     @State private var position: MapCameraPosition
     @State private var pin: CLLocationCoordinate2D?
     @State private var placeName: String?
-    @State private var isDragging = false
-    /// From the pin's tip to the finger, so the pin doesn't jump under it.
+    /// From the pin's tip to the finger, so the pin doesn't jump under it; set while dragging.
     @State private var dragOffset: CGSize?
     /// The pin position `placeName` came from a search for; not looked up again.
     @State private var namedPin: PinKey?
@@ -24,19 +21,22 @@ struct ExploreSheet: View {
     /// Where the camera is, to search near it.
     @State private var visibleRegion: MKCoordinateRegion?
 
+    /// - Parameter start: Where the pin starts: the place you are exploring, or where you are.
     init(start: ExplorePlace?, isExploring: Bool, explore: @escaping (ExplorePlace?) -> Void) {
-        self.start = start
         self.isExploring = isExploring
         self.explore = explore
         let coordinate = start.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
         _pin = State(initialValue: coordinate)
         _placeName = State(initialValue: isExploring ? start?.name : nil)
         _namedPin = State(initialValue: isExploring && start?.name != nil ? coordinate.map(PinKey.init) : nil)
-        _position = State(
-            initialValue: coordinate.map {
-                MapCameraPosition.region(
-                    MKCoordinateRegion(center: $0, latitudinalMeters: 20_000, longitudinalMeters: 20_000))
-            } ?? .automatic)
+        _position = State(initialValue: coordinate.map(Self.camera(around:)) ?? .automatic)
+    }
+
+    private var isDragging: Bool { dragOffset != nil }
+
+    /// About a city's width around `coordinate`.
+    private static func camera(around coordinate: CLLocationCoordinate2D) -> MapCameraPosition {
+        .region(MKCoordinateRegion(center: coordinate, latitudinalMeters: 20_000, longitudinalMeters: 20_000))
     }
 
     var body: some View {
@@ -52,7 +52,6 @@ struct ExploreSheet: View {
                                         .onChanged { value in
                                             let offset = dragOffset ?? tipOffset(proxy, from: value.startLocation)
                                             dragOffset = offset
-                                            isDragging = true
                                             let point = CGPoint(
                                                 x: value.location.x + offset.width,
                                                 y: value.location.y + offset.height)
@@ -60,10 +59,7 @@ struct ExploreSheet: View {
                                                 self.pin = coordinate
                                             }
                                         }
-                                        .onEnded { _ in
-                                            dragOffset = nil
-                                            isDragging = false
-                                        }
+                                        .onEnded { _ in dragOffset = nil }
                                 )
                         }
                         .annotationTitles(.hidden)
@@ -136,7 +132,7 @@ struct ExploreSheet: View {
         VStack(spacing: 12) {
             VStack(spacing: 2) {
                 if let pin {
-                    Text(placeName ?? String(localized: "Selected Place"))
+                    Text(Formatting.place(placeName))
                         .font(.headline)
                         .lineLimit(1)
                     Text(Self.coordinates(pin))
@@ -189,10 +185,7 @@ struct ExploreSheet: View {
         namedPin = PinKey(coordinate)
         query = ""
         results = []
-        withAnimation {
-            position = .region(
-                MKCoordinateRegion(center: coordinate, latitudinalMeters: 20_000, longitudinalMeters: 20_000))
-        }
+        withAnimation { position = Self.camera(around: coordinate) }
     }
 
     private func tipOffset(_ proxy: MapProxy, from start: CGPoint) -> CGSize {
