@@ -170,7 +170,7 @@ struct DemoTests {
         #expect(added.isPendingReview)
 
         let reordered = [added] + before
-        await me.setPhotoOrder(reordered)
+        await me.movePhoto(added, to: 0)
         await me.refresh()
         #expect(me.profile?.photos == reordered, "the new photo is now the main one and still in review")
 

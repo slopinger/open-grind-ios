@@ -1,5 +1,4 @@
 import OpenGrindKit
-import PhotosUI
 import SwiftUI
 
 /// A conversation with one profile.

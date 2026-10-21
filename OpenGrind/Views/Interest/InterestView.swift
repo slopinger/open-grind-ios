@@ -3,9 +3,8 @@ import SwiftUI
 
 /// Taps you received and who viewed your profile.
 struct InterestView: View {
-    enum Section: String, CaseIterable, Identifiable {
+    enum Section: String {
         case taps, views
-        var id: Self { self }
     }
 
     @Environment(AccountSession.self) private var session

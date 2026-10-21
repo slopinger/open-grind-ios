@@ -99,10 +99,6 @@ public final class ProfileModel: Identifiable {
             return false
         }
     }
-
-    public var chat: ChatModel {
-        session.chat(with: profileID, name: profile?.displayName)
-    }
 }
 
 /// Your own profile and account lists.
@@ -206,19 +202,18 @@ public final class MeModel {
     /// Moves a photo to `destination`; position 0 makes it the main photo.
     public func movePhoto(_ photo: ProfilePhoto, to destination: Int) async {
         await changePhotos {
-            guard var photos = self.profile?.photos, let index = photos.firstIndex(of: photo) else { return }
+            guard let original = self.profile?.photos, let index = original.firstIndex(of: photo) else { return }
+            var photos = original
             photos.remove(at: index)
             photos.insert(photo, at: min(max(destination, 0), photos.count))
-            await self.savePhotoOrder(photos)
-        }
-    }
-
-    /// Saves a new order of your photos; the first one becomes the main one.
-    public func setPhotoOrder(_ photos: [ProfilePhoto]) async {
-        await changePhotos {
-            // Only a new order of the photos there are now, not an older list.
-            guard let current = self.profile?.photos, Set(photos) == Set(current) else { return }
-            await self.savePhotoOrder(photos)
+            guard photos != original else { return }
+            self.profile?.photos = photos
+            do {
+                try await self.api.setProfilePhotos(photos.map(\.mediaHash))
+            } catch {
+                self.profile?.photos = original
+                self.actionFailure = Failure(error)
+            }
         }
     }
 
@@ -242,17 +237,6 @@ public final class MeModel {
             } catch {
                 self.actionFailure = Failure(error)
             }
-        }
-    }
-
-    private func savePhotoOrder(_ photos: [ProfilePhoto]) async {
-        guard let original = profile?.photos, photos != original else { return }
-        profile?.photos = photos
-        do {
-            try await api.setProfilePhotos(photos.map(\.mediaHash))
-        } catch {
-            profile?.photos = original
-            actionFailure = Failure(error)
         }
     }
 

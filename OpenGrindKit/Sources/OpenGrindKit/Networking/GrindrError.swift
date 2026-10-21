@@ -41,15 +41,6 @@ public enum GrindrError: Error, Sendable, Hashable {
     case cancelled
     case `internal`(String)
 
-    /// Retrying the same request could succeed.
-    public var isTransient: Bool {
-        switch self {
-        case .offline, .timedOut, .rateLimited, .blocked: true
-        case .server(let status, _, _): status >= 500 || status == 408
-        default: false
-        }
-    }
-
     /// The error for a non-success response.
     static func from(_ response: APIResponse) -> GrindrError {
         struct Body: Decodable {

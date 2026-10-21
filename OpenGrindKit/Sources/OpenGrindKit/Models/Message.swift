@@ -256,13 +256,11 @@ public enum OutgoingMessage: Hashable, Sendable {
     case text(String)
     /// A photo uploaded with ``GrindrAPI/uploadChatPhoto(_:)``.
     case image(mediaID: Int)
-    case location(latitude: Double, longitude: Double)
 
     var kind: MessageKind {
         switch self {
         case .text: .text
         case .image: .image
-        case .location: .location
         }
     }
 
@@ -270,8 +268,6 @@ public enum OutgoingMessage: Hashable, Sendable {
         switch self {
         case .text(let text): .object(["text": .string(text)])
         case .image(let mediaID): .object(["mediaId": .int(mediaID)])
-        case .location(let latitude, let longitude):
-            .object(["lat": .number(latitude), "lon": .number(longitude)])
         }
     }
 
@@ -288,20 +284,17 @@ public enum OutgoingMessage: Hashable, Sendable {
 /// A photo uploaded for chat.
 public struct UploadedMedia: Hashable, Sendable, Decodable {
     public var mediaID: Int
-    public var url: URL
 
     enum CodingKeys: String, CodingKey {
-        case mediaId, url
+        case mediaId
     }
 
-    public init(mediaID: Int, url: URL) {
+    public init(mediaID: Int) {
         self.mediaID = mediaID
-        self.url = url
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         mediaID = try container.decodeFlexibleInt(forKey: .mediaId)
-        url = try container.decode(URL.self, forKey: .url)
     }
 }

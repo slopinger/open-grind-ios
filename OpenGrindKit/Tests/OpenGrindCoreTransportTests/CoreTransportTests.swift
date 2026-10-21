@@ -29,8 +29,8 @@ struct CoreTransportTests {
         #expect(
             CoreTransport.error(.Api(code: 30001, message: "nope"))
                 == .server(status: 0, code: "30001", message: "nope"))
-        #expect(!CoreTransport.error(.Api(code: 30001, message: "nope")).isTransient)
-        #expect(CoreTransport.error(.Api(code: 503, message: "busy")).isTransient)
+        #expect(
+            CoreTransport.error(.Api(code: 503, message: "busy")) == .server(status: 503, code: nil, message: "busy"))
     }
 
     @Test func resumedCredentialsAreReportedToTheHandler() async throws {

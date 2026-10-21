@@ -259,11 +259,6 @@ actor DemoWorld {
                 return nil
             }
             content = .image(url: url, width: 600, height: 800)
-        case "Location":
-            guard let lat = Self.double(body["lat"]), let lon = Self.double(body["lon"]) else {
-                return nil
-            }
-            content = .location(latitude: lat, longitude: lon)
         default:
             return nil
         }

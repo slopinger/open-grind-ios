@@ -121,9 +121,7 @@ public final class AccountController {
         switch event {
         case .credentialsChanged(let stored):
             credentials.saveCredentials(stored)
-            if stored == nil, session != nil {
-                endSession(.sessionExpired)
-            }
+            if stored == nil { endSession(.sessionExpired) }
         case .sessionEnded(let banned, let reason):
             endSession(banned ? .banned(reason: reason) : .sessionExpired)
         case .realtime(let type, let json):

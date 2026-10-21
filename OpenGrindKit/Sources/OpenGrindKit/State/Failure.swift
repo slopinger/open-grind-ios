@@ -24,15 +24,6 @@ public enum Failure: Error, Sendable, Hashable {
         default: self = .unexpected(String(describing: error))
         }
     }
-
-    /// Trying again could help without the user changing anything.
-    public var isTransient: Bool {
-        switch self {
-        case .grindr(let error): error.isTransient
-        case .location(.unavailable): true
-        case .location, .unexpected: false
-        }
-    }
 }
 
 /// The loading state of a screen's content.
@@ -41,8 +32,6 @@ public enum LoadState: Sendable, Hashable {
     case loading
     case loaded
     case failed(Failure)
-
-    public var isLoading: Bool { self == .loading }
 
     /// Never loaded, or the last load failed.
     public var needsLoad: Bool { self == .idle || failure != nil }

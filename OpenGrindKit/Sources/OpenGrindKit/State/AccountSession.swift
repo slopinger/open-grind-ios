@@ -116,9 +116,4 @@ public final class AccountSession {
         browse.setFavorite(profileID, isFavorite)
         inbox.setFavorite(profileID, isFavorite)
     }
-
-    /// For tests and the demo: process an event as if it came from the server.
-    public func simulate(_ event: RealtimeEvent) {
-        receive(event)
-    }
 }

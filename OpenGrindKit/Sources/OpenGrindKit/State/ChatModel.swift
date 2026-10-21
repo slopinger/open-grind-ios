@@ -219,7 +219,6 @@ public final class ChatModel: Identifiable {
         switch message {
         case .text(let text): .text(text)
         case .image: .unsupported(.image)
-        case .location(let latitude, let longitude): .location(latitude: latitude, longitude: longitude)
         }
     }
 

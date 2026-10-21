@@ -61,7 +61,7 @@ struct ModelTests {
         transport.respond { request in
             guard request.path == "/v4/chat/message/send" else { return .json("{}") }
             // The websocket delivers the message before the REST call returns.
-            Task { @MainActor in session.simulate(.message(echo)) }
+            Task { @MainActor in session.receive(.message(echo)) }
             Thread.sleep(forTimeInterval: 0.05)
             return .json(
                 #"{"messageId":"srv","conversationId":"1:2","senderId":1,"timestamp":1000,"type":"Text","body":{"text":"hi"}}"#
@@ -83,14 +83,14 @@ struct ModelTests {
         await chat.reload()
         #expect(chat.items.map(\.id) == ["a", "b"])
 
-        session.simulate(.message(message("c", from: 2, at: 3, "third")))
-        session.simulate(.message(message("late", from: 2, at: 1, "out of order")))
+        session.receive(.message(message("c", from: 2, at: 3, "third")))
+        session.receive(.message(message("late", from: 2, at: 1, "out of order")))
         #expect(chat.items.map(\.id) == ["a", "late", "b", "c"])
 
         var retract = message("r", from: 2, at: 4, "")
         retract.content = .unsupported(.retract)
         retract.retractedMessageID = "b"
-        session.simulate(.message(retract))
+        session.receive(.message(retract))
         #expect(chat.items.first { $0.id == "b" }?.message.content == .unsent)
         #expect(!chat.items.contains { $0.id == "r" })
     }
@@ -98,14 +98,14 @@ struct ModelTests {
     @Test func readReceiptsMarkTheLastReadOutgoingMessage() async {
         let session = session(FakeTransport())
         let chat = session.chat(with: 2)
-        session.simulate(.message(message("a", from: 1, at: 1, "one")))
-        session.simulate(.message(message("b", from: 1, at: 3, "two")))
+        session.receive(.message(message("a", from: 1, at: 1, "one")))
+        session.receive(.message(message("b", from: 1, at: 3, "two")))
         #expect(chat.lastReadOutgoingID == nil)
-        session.simulate(
+        session.receive(
             .conversationRead(conversationID: "1:2", profileID: 2, date: Date(milliseconds: 2000)))
         #expect(chat.lastReadOutgoingID == "a")
         // Our own read from another device says nothing about the other side.
-        session.simulate(
+        session.receive(
             .conversationRead(conversationID: "1:2", profileID: 1, date: Date(milliseconds: 9000)))
         #expect(chat.lastReadOutgoingID == "a")
     }
@@ -115,7 +115,7 @@ struct ModelTests {
         let session = session(transport)
         let chat = session.chat(with: 2)
         chat.appeared()
-        session.simulate(.message(message("x", from: 2, at: 1, "hey")))
+        session.receive(.message(message("x", from: 2, at: 1, "hey")))
         #expect(
             await eventually {
                 transport.requests.contains { $0.path == "/v4/chat/conversation/1:2/read/x" }
@@ -137,23 +137,23 @@ struct ModelTests {
         await inbox.refresh()
         #expect(inbox.conversations.map(\.id) == ["1:3", "1:2"])
 
-        session.simulate(.message(message("m", from: 2, at: 6, "hi")))
+        session.receive(.message(message("m", from: 2, at: 6, "hi")))
         #expect(inbox.conversations.map(\.id) == ["1:2", "1:3"])
         #expect(inbox.conversations.first?.unreadCount == 1)
         #expect(inbox.conversations.first?.preview?.text == "hi")
         #expect(inbox.unreadCount == 1)
 
-        session.simulate(.message(message("m", from: 2, at: 6, "hi")))
+        session.receive(.message(message("m", from: 2, at: 6, "hi")))
         var retract = message("r", from: 2, at: 7, "")
         retract.content = .unsupported(.retract)
         retract.retractedMessageID = "m"
-        session.simulate(.message(retract))
+        session.receive(.message(retract))
         #expect(inbox.unreadCount == 1, "a repeated delivery or an unsend is no new message")
 
-        session.simulate(.conversationRead(conversationID: "1:2", profileID: 1, date: .now))
+        session.receive(.conversationRead(conversationID: "1:2", profileID: 1, date: .now))
         #expect(inbox.unreadCount == 0)
 
-        session.simulate(.conversationsDeleted(["1:3"]))
+        session.receive(.conversationsDeleted(["1:3"]))
         #expect(inbox.conversations.map(\.id) == ["1:2"])
     }
 
@@ -169,7 +169,7 @@ struct ModelTests {
         #expect(session.browse.unreadCount(of: tile) == 5, "the grid's count until the inbox has loaded")
 
         await session.inbox.refresh()
-        session.simulate(.message(message("m", from: 2, at: 6, "hi")))
+        session.receive(.message(message("m", from: 2, at: 6, "hi")))
         #expect(session.browse.unreadCount(of: tile) == 1)
         session.inbox.markRead("1:2")
         #expect(session.browse.unreadCount(of: tile) == 0, "reading the chat clears the tile")
