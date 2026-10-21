@@ -190,12 +190,14 @@ public final class InboxModel {
             }
             return
         }
+        // The same message again, e.g. delivered twice around a reconnect.
+        let isRepeat = conversations[index].preview?.messageID == message.id
         conversations[index].lastActivity = message.date
         conversations[index].preview = MessagePreview(
             messageID: message.id, kind: message.content.kind, text: message.previewText,
             senderID: message.senderID,
             isUnsent: message.content == .unsent)
-        if isIncoming, message.content != .unsent, openConversationID != message.conversationID {
+        if isIncoming, !isRepeat, message.content != .unsent, openConversationID != message.conversationID {
             conversations[index].unreadCount += 1
         }
         conversations = Self.sorted(conversations)

@@ -143,6 +143,13 @@ struct ModelTests {
         #expect(inbox.conversations.first?.preview?.text == "hi")
         #expect(inbox.unreadCount == 1)
 
+        session.simulate(.message(message("m", from: 2, at: 6, "hi")))
+        var retract = message("r", from: 2, at: 7, "")
+        retract.content = .unsupported(.retract)
+        retract.retractedMessageID = "m"
+        session.simulate(.message(retract))
+        #expect(inbox.unreadCount == 1, "a repeated delivery or an unsend is no new message")
+
         session.simulate(.conversationRead(conversationID: "1:2", profileID: 1, date: .now))
         #expect(inbox.unreadCount == 0)
 
