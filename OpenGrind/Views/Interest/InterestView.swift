@@ -14,12 +14,16 @@ struct InterestView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            // A ZStack rather than a Group, whose onAppear would apply to each list in turn.
+            ZStack {
                 switch section {
                 case .taps: taps
                 case .views: views
                 }
             }
+            // Off screen also while a profile opened from the lists is shown.
+            .onAppear { interest.appeared() }
+            .onDisappear { interest.disappeared() }
             .navigationTitle("Interest")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -209,7 +209,7 @@ struct ModelTests {
         let interest = session(FakeTransport()).interest
         interest.handle(.profileViewed(by: 2, photoHash: nil, totalViews: nil))
         #expect(interest.unseenCount == 1)
-        interest.isOnScreen = true
+        interest.appeared()
         #expect(interest.unseenCount == 0)
         interest.handle(.profileViewed(by: 3, photoHash: nil, totalViews: nil))
         #expect(interest.unseenCount == 0, "a view that arrives while the tab is open is seen")

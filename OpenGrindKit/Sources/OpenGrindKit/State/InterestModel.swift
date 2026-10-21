@@ -11,10 +11,8 @@ public final class InterestModel {
     public private(set) var viewsState: LoadState = .idle
     /// New taps and views since the Interest tab was last on screen.
     public private(set) var unseenCount = 0
-    /// Whether the Interest tab is on screen; nothing that arrives meanwhile is unseen.
-    public var isOnScreen = false {
-        didSet { if isOnScreen { unseenCount = 0 } }
-    }
+    /// The lists are on screen; nothing that arrives meanwhile is unseen.
+    @ObservationIgnored private var isOnScreen = false
 
     @ObservationIgnored private let api: GrindrAPI
     @ObservationIgnored private let me: ProfileID
@@ -24,6 +22,17 @@ public final class InterestModel {
     init(api: GrindrAPI, me: ProfileID) {
         self.api = api
         self.me = me
+    }
+
+    /// The taps and views lists came on screen.
+    public func appeared() {
+        isOnScreen = true
+        unseenCount = 0
+    }
+
+    /// The lists left the screen, e.g. for another tab or a profile opened from them.
+    public func disappeared() {
+        isOnScreen = false
     }
 
     public func loadIfNeeded() async {

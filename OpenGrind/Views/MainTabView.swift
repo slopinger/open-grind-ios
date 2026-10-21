@@ -43,10 +43,6 @@ struct MainTabView: View {
             async let me: Void = session.me.loadIfNeeded()
             _ = await (inbox, interest, me)
         }
-        // Initially too: the selected tab is restored when the app launches.
-        .onChange(of: selection, initial: true) { _, tab in
-            session.interest.isOnScreen = tab == .interest
-        }
         .alert(
             "Your Account Is Restricted", isPresented: Bindable(app.account).restriction.isPresent(),
             presenting: app.account.restriction
