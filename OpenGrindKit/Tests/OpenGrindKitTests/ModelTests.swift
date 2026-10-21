@@ -175,6 +175,17 @@ struct ModelTests {
         #expect(inbox.actionFailure == .grindr(.offline))
     }
 
+    @Test func aFailedBlockAfterAReportDoesNotFailTheReport() async throws {
+        let transport = FakeTransport { request in
+            if request.path.hasPrefix("/v3/me/blocks") { throw GrindrError.offline }
+            return .json("{}")
+        }
+        let model = ProfileModel(profileID: 2, session: session(transport))
+        let blocked = try await model.report(ProfileReport(reason: .spam, locations: []), alsoBlock: true)
+        #expect(!blocked)
+        #expect(model.actionFailure == .grindr(.offline))
+    }
+
     @Test func interestOnScreenIsNotUnseen() {
         let interest = session(FakeTransport()).interest
         interest.handle(.profileViewed(by: 2, photoHash: nil, totalViews: nil))

@@ -100,8 +100,7 @@ private struct ProfileContent: View {
             }
         ) {
             ReportSheet(name: name) { report, alsoBlock in
-                try await model.report(report, alsoBlock: alsoBlock)
-                hasBlocked = alsoBlock
+                hasBlocked = try await model.report(report, alsoBlock: alsoBlock)
             }
         }
         .fullScreenCover(item: $viewerPhoto) { selection in

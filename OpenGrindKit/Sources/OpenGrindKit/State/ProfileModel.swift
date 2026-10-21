@@ -85,9 +85,19 @@ public final class ProfileModel: Identifiable {
     }
 
     /// Reports the profile to Grindr, and blocks it too when `alsoBlock` is set.
-    public func report(_ report: ProfileReport, alsoBlock: Bool) async throws {
+    /// Returns whether it is blocked now. Throws only if the report failed: a
+    /// failed block becomes ``actionFailure``, so the report isn't sent again.
+    @discardableResult
+    public func report(_ report: ProfileReport, alsoBlock: Bool) async throws -> Bool {
         try await session.api.report(profileID, report)
-        if alsoBlock { try await block() }
+        guard alsoBlock else { return false }
+        do {
+            try await block()
+            return true
+        } catch {
+            actionFailure = Failure(error)
+            return false
+        }
     }
 
     public var chat: ChatModel {
