@@ -99,7 +99,6 @@ final class AppModel {
                 }
             }
         }
-        transport.onDeviceRotated = { [keychain] device in keychain.device = device }
         let account = AccountController(
             transport: transport, credentials: keychain, location: location, preferences: DefaultsPreferenceStore())
         let images = ImagePipeline(transport: transport)

@@ -13,8 +13,6 @@ public final class CoreTransport: GrindrTransport, @unchecked Sendable {
 
     private let client: CoreClient
     private let listener = Listener()
-    /// Called after sign-out with the new device identity, so it can be persisted.
-    public var onDeviceRotated: (@Sendable (String) -> Void)?
 
     /// - Parameters:
     ///   - deviceJSON: The persisted device identity, from ``makeDevice()``.
@@ -41,10 +39,10 @@ public final class CoreTransport: GrindrTransport, @unchecked Sendable {
             profileID: profileID, restriction: outcome.restriction.map(Self.restriction))
     }
 
+    /// Signs out and keeps the device identity, as the official app keeps its
+    /// device for the install: a new device at every sign-in looks like many phones.
     public func signOut() async throws {
-        let device = Self.makeDevice()
-        try await Self.mapAsyncErrors { try await client.signOut(newDeviceJson: device) }
-        onDeviceRotated?(device)
+        try await Self.mapAsyncErrors { try await client.signOut(newDeviceJson: nil) }
     }
 
     public func send(_ request: APIRequest) async throws -> APIResponse {
