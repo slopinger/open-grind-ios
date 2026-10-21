@@ -1,8 +1,10 @@
 import SwiftUI
 
+// Binding's get and set closures are @Sendable, so what they capture must be Sendable too.
+
 extension Binding {
     /// Whether an optional value is set, for presenting it; dismissing clears it.
-    func isPresent<Wrapped>() -> Binding<Bool> where Value == Wrapped? {
+    func isPresent<Wrapped: Sendable>() -> Binding<Bool> where Value == Wrapped? {
         Binding<Bool> {
             wrappedValue != nil
         } set: { isPresented in
@@ -13,7 +15,7 @@ extension Binding {
 
 extension Binding {
     /// Whether the set holds `element`, for a toggle that adds or removes it.
-    func contains<Element: Hashable>(_ element: Element) -> Binding<Bool> where Value == Set<Element> {
+    func contains<Element: Hashable & Sendable>(_ element: Element) -> Binding<Bool> where Value == Set<Element> {
         Binding<Bool> {
             wrappedValue.contains(element)
         } set: { isOn in

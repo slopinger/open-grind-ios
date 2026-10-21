@@ -148,7 +148,10 @@ struct EditPhotosView: View {
                     }
                 }
             }
-            return await group.reduce(into: []) { $0.append($1) }.sorted { $0.index < $1.index }.map(\.result)
+            // next() rather than reduce(into:), which would send the main-actor group elsewhere.
+            var finished: [(index: Int, result: Result<JPEGPhoto, Failure>)] = []
+            while let photo = await group.next() { finished.append(photo) }
+            return finished.sorted { $0.index < $1.index }.map(\.result)
         }
         for case .failure(let failure) in prepared { me.actionFailure = failure }
         await me.addPhotos(prepared.compactMap { try? $0.get() })
