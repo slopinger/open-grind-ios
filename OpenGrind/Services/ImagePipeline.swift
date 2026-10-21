@@ -15,7 +15,7 @@ actor ImagePipeline {
     private let transport: any GrindrTransport
     /// NSCache is thread-safe, so ``cachedImage(at:maxPixelSize:)`` reads it without the actor.
     private nonisolated(unsafe) let memory = NSCache<NSString, UIImage>()
-    private var inFlight: [String: Task<(image: UIImage, download: Data?), any Error>] = [:]
+    private var inFlight: [String: Task<(image: UIImage, written: URL?), any Error>] = [:]
     /// Counts ``removeAll()`` calls, so downloads started before one aren't written afterwards.
     private var generation = 0
     private let directory: URL
