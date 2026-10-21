@@ -8,6 +8,10 @@ struct ProfileScreen: View {
     var preview: GridProfile?
     /// Opened from the chat with this profile: "Message" goes back to it.
     var isFromChat = false
+    /// The page on screen in a ``ProfilePager``, or a profile on its own. Only
+    /// that one loads (and counts as viewed) and shows its name and menu in the
+    /// navigation bar; its neighbours wait with the grid's data.
+    var isCurrentPage = true
 
     @Environment(AccountSession.self) private var session
     @State private var model: ProfileModel?
@@ -15,7 +19,7 @@ struct ProfileScreen: View {
     var body: some View {
         Group {
             if let model {
-                ProfileContent(model: model, isFromChat: isFromChat)
+                ProfileContent(model: model, isFromChat: isFromChat, isCurrentPage: isCurrentPage)
             } else {
                 Color.clear
             }
@@ -32,6 +36,7 @@ struct ProfileScreen: View {
 private struct ProfileContent: View {
     @Bindable var model: ProfileModel
     let isFromChat: Bool
+    let isCurrentPage: Bool
 
     @Environment(AccountSession.self) private var session
     @Environment(\.dismiss) private var dismiss
@@ -68,16 +73,26 @@ private struct ProfileContent: View {
                 LoadingView()
             }
         }
-        .navigationTitle(name)
+        // The tab bar stays below the profile: hiding it on the way in got it stuck
+        // hidden after the zoom transition back to the grid.
         .navigationBarTitleDisplayMode(.inline)
-        // The action bar takes the tab bar's place, as in the chat.
-        .toolbar(model.isMe ? .automatic : .hidden, for: .tabBar)
         .toolbar {
-            if !model.isMe, model.profile != nil {
-                ToolbarItem(placement: .primaryAction) { safetyMenu }
+            // Pages next to the current one leave the bar to it.
+            if isCurrentPage {
+                ToolbarItem(placement: .principal) {
+                    Text(name)
+                        .font(.headline)
+                        .lineLimit(1)
+                        .accessibilityAddTraits(.isHeader)
+                }
+                if !model.isMe, model.profile != nil {
+                    ToolbarItem(placement: .primaryAction) { safetyMenu }
+                }
             }
         }
-        .task { await model.loadIfNeeded() }
+        .task(id: isCurrentPage) {
+            if isCurrentPage { await model.loadIfNeeded() }
+        }
         .confirmationDialog(
             "Block \(name)?", isPresented: $isConfirmingBlock, titleVisibility: .visible
         ) {
@@ -137,27 +152,39 @@ private struct ProfileContent: View {
                 if photos.isEmpty {
                     ImagePlaceholder()
                 } else {
-                    TabView(selection: $selectedPhoto) {
-                        ForEach(photos) { photo in
-                            Button {
-                                viewerPhoto = PhotoSelection(id: photo.id)
-                            } label: {
-                                RemoteImage(
-                                    url: MediaURL.profileImage(photo.mediaHash, size: .full), pointSize: 500
-                                )
-                                .overlay(alignment: .bottomLeading) {
-                                    if photo.isPendingReview { PendingReviewBadge() }
+                    // Up and down, as sideways goes to the next profile.
+                    ScrollView(.vertical) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(photos) { photo in
+                                Button {
+                                    viewerPhoto = PhotoSelection(id: photo.id)
+                                } label: {
+                                    RemoteImage(
+                                        url: MediaURL.profileImage(photo.mediaHash, size: .full), pointSize: 500
+                                    )
+                                    .overlay(alignment: .bottomLeading) {
+                                        if photo.isPendingReview { PendingReviewBadge() }
+                                    }
                                 }
+                                .buttonStyle(.plain)
+                                .containerRelativeFrame([.horizontal, .vertical])
+                                .clipped()
+                                .accessibilityLabel(
+                                    "Photo \((photos.firstIndex(of: photo) ?? 0) + 1) of \(photos.count)"
+                                )
+                                .accessibilityHint("Shows the photo full screen.")
                             }
-                            .buttonStyle(.plain)
-                            .tag(Optional(photo.id))
-                            .accessibilityLabel(
-                                "Photo \((photos.firstIndex(of: photo) ?? 0) + 1) of \(photos.count)"
-                            )
-                            .accessibilityHint("Shows the photo full screen.")
+                        }
+                        .scrollTargetLayout()
+                    }
+                    .scrollTargetBehavior(.paging)
+                    .scrollPosition(id: $selectedPhoto)
+                    .scrollIndicators(.hidden)
+                    .overlay(alignment: .trailing) {
+                        if photos.count > 1 {
+                            PhotoPageDots(photos: photos, selected: selectedPhoto ?? photos[0].id)
                         }
                     }
-                    .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .always : .never))
                 }
             }
             .clipped()
@@ -251,6 +278,29 @@ private struct ProfileContent: View {
 /// Identifies the photo opened full screen.
 private struct PhotoSelection: Identifiable {
     var id: String
+}
+
+/// Which of the profile's photos is shown, as dots down the side.
+private struct PhotoPageDots: View {
+    let photos: [ProfilePhoto]
+    let selected: String
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ForEach(photos) { photo in
+                Circle()
+                    .fill(photo.id == selected ? AnyShapeStyle(.white) : AnyShapeStyle(.white.opacity(0.45)))
+                    .frame(width: 7, height: 7)
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 5)
+        .background(.black.opacity(0.25), in: .capsule)
+        .padding(.trailing, 8)
+        .animation(.default, value: selected)
+        // VoiceOver reads each photo's position instead.
+        .accessibilityHidden(true)
+    }
 }
 
 /// Marks your own photos that moderation hasn't approved yet.
