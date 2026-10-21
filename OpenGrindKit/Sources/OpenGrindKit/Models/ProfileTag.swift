@@ -57,6 +57,12 @@ public struct ProfileTagCatalog: Hashable, Sendable {
         tagsByKey[value] != nil ? value : keysByText[value] ?? value
     }
 
+    /// The text to show for a tag's key or text. Values the catalog doesn't know
+    /// are shown as they are.
+    public func text(for value: String) -> String {
+        tagsByKey[value]?.text ?? value
+    }
+
     /// Tags whose text contains `query`, in catalog order.
     public func tags(matching query: String) -> [ProfileTag] {
         let query = query.trimmingCharacters(in: .whitespaces)

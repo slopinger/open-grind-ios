@@ -99,7 +99,7 @@ struct ProfileDetails: View {
 
     /// Profiles carry tag texts or keys; keys are shown by their text.
     private var tags: [String] {
-        profile.tags.map { catalogs.tags?.tag(forKey: $0)?.text ?? $0 }
+        profile.tags.map { catalogs.tags?.text(for: $0) ?? $0 }
     }
 
     private var identity: [DetailRow] {

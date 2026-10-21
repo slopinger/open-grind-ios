@@ -20,7 +20,7 @@ struct TagPickerRow: View {
                     Text(emptyLabel)
                 } else if let catalog = session.catalogs.tags {
                     Text(
-                        selection.map { catalog.tag(forKey: $0)?.text ?? $0 }.sorted()
+                        selection.map(catalog.text(for:)).sorted()
                             .formatted(.list(type: limit == nil ? .or : .and))
                     )
                     .lineLimit(1)
@@ -29,7 +29,7 @@ struct TagPickerRow: View {
                 }
             }
         }
-        .loadingTags(into: $selection, from: session.catalogs)
+        .task { await session.catalogs.loadTags() }
     }
 }
 
@@ -56,7 +56,7 @@ struct TagPickerList: View {
         }
         .checklistPage("Tags", selection: selection)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search Tags")
-        .loadingTags(into: $selection, from: catalogs)
+        .task { await catalogs.loadTags() }
     }
 
     @ViewBuilder
@@ -101,20 +101,6 @@ struct TagPickerList: View {
             } else {
                 selection.insert(tag.key)
             }
-        }
-    }
-}
-
-extension View {
-    /// Loads the tag catalog and turns tag texts in `selection` into keys once
-    /// it is there. Profiles can carry texts, and a catalog that failed to load
-    /// with your profile may only arrive here, after a retry.
-    fileprivate func loadingTags(into selection: Binding<Set<String>>, from catalogs: CatalogModel) -> some View {
-        task(id: catalogs.tags == nil) {
-            await catalogs.loadTags()
-            guard let catalog = catalogs.tags else { return }
-            let keys = Set(selection.wrappedValue.map(catalog.key(for:)))
-            if keys != selection.wrappedValue { selection.wrappedValue = keys }
         }
     }
 }

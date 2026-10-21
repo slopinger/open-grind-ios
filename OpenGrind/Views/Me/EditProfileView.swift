@@ -5,7 +5,7 @@ import SwiftUI
 /// change them, on their own screen.
 struct EditProfileView: View {
     let me: MeModel
-    private let original: ProfileEdit
+    @State private var original: ProfileEdit
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AccountSession.self) private var session
@@ -17,11 +17,19 @@ struct EditProfileView: View {
 
     init(profile: Profile, me: MeModel) {
         self.me = me
-        original = ProfileEdit(profile)
-        _edit = State(initialValue: original)
+        _original = State(initialValue: ProfileEdit(profile))
+        _edit = State(initialValue: ProfileEdit(profile))
     }
 
     private var hasChanges: Bool { edit != original }
+
+    /// Profiles can carry tag texts, which stay texts if the tag catalog didn't load
+    /// with your profile. Once it is there, both copies get keys, so nothing looks changed.
+    private func useTagKeys() {
+        guard let catalog = session.catalogs.tags else { return }
+        original.tags = Set(original.tags.map(catalog.key(for:)))
+        edit.tags = Set(edit.tags.map(catalog.key(for:)))
+    }
 
     var body: some View {
         NavigationStack {
@@ -63,6 +71,7 @@ struct EditProfileView: View {
                 Button("Keep Editing", role: .cancel) {}
             }
             .failureAlert($failure)
+            .task(id: session.catalogs.tags == nil) { useTagKeys() }
         }
     }
 
