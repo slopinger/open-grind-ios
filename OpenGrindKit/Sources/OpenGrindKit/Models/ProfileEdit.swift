@@ -1,7 +1,7 @@
 import Foundation
 
-/// The parts of your own profile you can edit. Saving sends only what changed
-/// (`PATCH /v4/me/profile`).
+/// The parts of your own profile you can edit. Saving sends the whole profile
+/// (`PUT /v3.1/me/profile`), as Grindr's own Edit Profile screen does.
 public struct ProfileEdit: Hashable, Sendable {
     public static let maxDisplayNameLength = 15
     public static let maxAboutMeLength = 255
@@ -74,49 +74,51 @@ public struct ProfileEdit: Hashable, Sendable {
             && genderIDs.count <= Self.maxGenders && pronounIDs.count <= Self.maxPronouns
     }
 
-    /// The `PATCH` body with the fields that differ from `original`, or `nil`
-    /// if nothing changed.
-    public func patch(from original: ProfileEdit) -> JSONValue? {
-        var fields: [String: JSONValue] = [:]
-        func set<T: ProfileAttribute>(_ values: Set<T>) -> JSONValue {
-            .ints(values.map(\.rawValue).sorted())
-        }
+    /// The `PUT /v3.1/me/profile` body: `profile` with this edit applied, with the
+    /// fields Grindr's Edit Profile screen sends, or `nil` if nothing changed.
+    /// Fields the form doesn't show (tribes you're into, social networks,
+    /// approximate distance) keep the profile's values.
+    public func update(of profile: Profile) -> JSONValue? {
+        guard self != ProfileEdit(profile) else { return nil }
+        let saved = applied(to: profile)
+        func list<T: ProfileAttribute>(_ values: [T]) -> JSONValue { .ints(values.map(\.rawValue)) }
         func one<T: ProfileAttribute>(_ value: T?) -> JSONValue { .optional(value?.rawValue) }
-
-        if displayName != original.displayName { fields["displayName"] = .optional(displayName.nonBlank) }
-        if aboutMe != original.aboutMe { fields["aboutMe"] = .optional(aboutMe.nonBlank) }
-        if age != original.age { fields["age"] = .optional(age) }
-        if showsAge != original.showsAge { fields["showAge"] = .bool(showsAge) }
-        if showsDistance != original.showsDistance { fields["showDistance"] = .bool(showsDistance) }
-        if height != original.height { fields["height"] = .optional(height) }
-        if weight != original.weight { fields["weight"] = .optional(weight) }
-        if position != original.position { fields["sexualPosition"] = one(position) }
-        if showsPosition != original.showsPosition { fields["showPosition"] = .bool(showsPosition) }
-        if bodyType != original.bodyType { fields["bodyType"] = one(bodyType) }
-        if ethnicity != original.ethnicity { fields["ethnicity"] = one(ethnicity) }
-        if relationshipStatus != original.relationshipStatus {
-            fields["relationshipStatus"] = one(relationshipStatus)
-        }
-        if lookingFor != original.lookingFor { fields["lookingFor"] = set(lookingFor) }
-        if meetAt != original.meetAt { fields["meetAt"] = set(meetAt) }
-        if tribes != original.tribes { fields["grindrTribes"] = set(tribes) }
-        if showsTribes != original.showsTribes { fields["showTribes"] = .bool(showsTribes) }
-        if acceptsNSFWPics != original.acceptsNSFWPics { fields["nsfw"] = one(acceptsNSFWPics) }
-        if hivStatus != original.hivStatus { fields["hivStatus"] = one(hivStatus) }
-        if lastTested != original.lastTested {
-            fields["lastTestedDate"] = .timestamp(lastTested)
-        }
-        if sexualHealth != original.sexualHealth { fields["sexualHealth"] = set(sexualHealth) }
-        if vaccines != original.vaccines { fields["vaccines"] = set(vaccines) }
-        if genderIDs != original.genderIDs { fields["genders"] = .ints(genderIDs) }
-        if pronounIDs != original.pronounIDs { fields["pronouns"] = .ints(pronounIDs) }
-        if tags != original.tags { fields["profileTags"] = .strings(tags.sorted()) }
-        return fields.isEmpty ? nil : .object(fields)
+        return .object([
+            "displayName": .optional(saved.displayName),
+            "aboutMe": .optional(saved.aboutMe),
+            "age": .optional(saved.age),
+            "showAge": .bool(saved.showsAge),
+            "showDistance": .bool(saved.showsDistance),
+            "approximateDistance": .bool(saved.isDistanceApproximate),
+            "height": .optional(saved.height),
+            "weight": .optional(saved.weight),
+            "sexualPosition": one(saved.position),
+            "showPosition": .bool(saved.showsPosition),
+            "bodyType": one(saved.bodyType),
+            "ethnicity": one(saved.ethnicity),
+            "relationshipStatus": one(saved.relationshipStatus),
+            "lookingFor": list(saved.lookingFor),
+            "meetAt": list(saved.meetAt),
+            "grindrTribes": list(saved.tribes),
+            "tribesImInto": list(saved.tribesImInto),
+            "showTribes": .bool(saved.showsTribes),
+            "nsfw": one(saved.acceptsNSFWPics),
+            "hivStatus": one(saved.hivStatus),
+            "lastTestedDate": .timestamp(saved.lastTested),
+            "sexualHealth": list(saved.sexualHealth),
+            "vaccines": list(saved.vaccines),
+            "genders": .ints(saved.genderIDs),
+            "pronouns": .ints(saved.pronounIDs),
+            "profileTags": .strings(saved.tags),
+            "socialNetworks": .object(saved.socialNetworks.mapValues { .object(["userId": .string($0)]) }),
+        ])
     }
 
     /// `profile` with this edit applied, to show the change before the server
-    /// sends the profile again.
+    /// sends the profile again. Values the form can't show, such as "prefer to
+    /// discuss", stay unless they were changed.
     public func applied(to profile: Profile) -> Profile {
+        let original = ProfileEdit(profile)
         var profile = profile
         profile.displayName = displayName.nonBlank
         profile.aboutMe = aboutMe.nonBlank
@@ -135,9 +137,11 @@ public struct ProfileEdit: Hashable, Sendable {
         profile.tribes = Tribe.allCases.filter(tribes.contains)
         profile.showsTribes = showsTribes
         profile.acceptsNSFWPics = acceptsNSFWPics
-        profile.hivStatus = hivStatus
+        if hivStatus != original.hivStatus { profile.hivStatus = hivStatus }
         profile.lastTested = lastTested
-        profile.sexualHealth = SexualHealthPractice.allCases.filter(sexualHealth.contains)
+        if sexualHealth != original.sexualHealth {
+            profile.sexualHealth = SexualHealthPractice.allCases.filter(sexualHealth.contains)
+        }
         profile.vaccines = Vaccine.allCases.filter(vaccines.contains)
         profile.genderIDs = genderIDs
         profile.pronounIDs = pronounIDs

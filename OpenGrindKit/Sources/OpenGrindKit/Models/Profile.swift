@@ -74,7 +74,13 @@ public struct Profile: Identifiable, Hashable, Sendable, OnlinePresence {
     public var genderIDs: [Int]
     public var pronounIDs: [Int]
     public var tags: [String]
-    public var instagram: String?
+    /// User names by network, e.g. `instagram`. Kept whole, as saving your
+    /// profile sends them back.
+    public var socialNetworks: [String: String]
+    public var instagram: String? {
+        get { socialNetworks["instagram"] }
+        set { socialNetworks["instagram"] = newValue }
+    }
     public var isFavorite: Bool
     /// The tap this profile last sent you, if any.
     public var receivedTap: TapType?
@@ -134,7 +140,7 @@ public struct Profile: Identifiable, Hashable, Sendable, OnlinePresence {
         self.genderIDs = genderIDs
         self.pronounIDs = pronounIDs
         self.tags = tags
-        self.instagram = instagram
+        socialNetworks = instagram.map { ["instagram": $0] } ?? [:]
         self.isFavorite = isFavorite
         self.receivedTap = receivedTap
         self.hasBeenTapped = hasBeenTapped
@@ -165,9 +171,8 @@ extension Profile: Decodable {
         var state: Int?
     }
 
-    private struct SocialNetworks: Decodable {
-        struct Account: Decodable { var userId: String? }
-        var instagram: Account?
+    private struct SocialAccount: Decodable {
+        var userId: String?
     }
 
     public init(from decoder: any Decoder) throws {
@@ -215,7 +220,9 @@ extension Profile: Decodable {
         genderIDs = container.lossyArray(of: Int.self, forKey: .genders)
         pronounIDs = container.lossyArray(of: Int.self, forKey: .pronouns)
         tags = container.lossyArray(of: String.self, forKey: .profileTags)
-        instagram = container.lenient(SocialNetworks.self, forKey: .socialNetworks)?.instagram?.userId
+        socialNetworks =
+            container.lenient([String: SocialAccount?].self, forKey: .socialNetworks)?
+            .compactMapValues { $0?.userId } ?? [:]
         isFavorite = container.flag(forKey: .isFavorite)
         receivedTap = TapType.known(container.lenient(Int.self, forKey: .tapType))
         hasBeenTapped = container.flag(forKey: .tapped)

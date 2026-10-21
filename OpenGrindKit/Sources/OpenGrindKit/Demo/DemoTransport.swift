@@ -141,7 +141,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
             await world.deleteMyPhotos(Set(object?["media_hashes"] as? [String] ?? []))
             return .ok
         }
-        if route.matches(.patch, "v4/me/profile") {
+        if route.matches(.put, "v3.1/me/profile") {
             await world.updateMe(body)
             return .ok
         }

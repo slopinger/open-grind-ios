@@ -158,8 +158,8 @@ public final class MeModel {
     /// moderation refuses the name or text.
     public func save(_ edit: ProfileEdit) async throws {
         guard let profile else { return }
-        guard let patch = edit.patch(from: ProfileEdit(profile)) else { return }
-        try await api.updateProfile(patch)
+        guard let update = edit.update(of: profile) else { return }
+        try await api.updateProfile(update)
         self.profile = edit.applied(to: profile)
     }
 

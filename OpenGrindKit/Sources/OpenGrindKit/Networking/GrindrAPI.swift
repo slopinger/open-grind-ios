@@ -65,9 +65,10 @@ public struct GrindrAPI: Sendable {
         }
     }
 
-    /// Saves the changed fields of your profile.
-    public func updateProfile(_ patch: JSONValue) async throws {
-        try await perform(.json(.patch, "/v4/me/profile", patch))
+    /// Saves your whole profile, as Grindr's Edit Profile screen does (see
+    /// ``ProfileEdit/update(of:)``).
+    public func updateProfile(_ profile: JSONValue) async throws {
+        try await perform(.json(.put, "/v3.1/me/profile", profile))
     }
 
     /// Uploads a JPEG of `width` × `height` pixels for your profile. Grindr cuts

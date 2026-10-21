@@ -61,28 +61,44 @@ struct RequestTests {
         #expect(BrowseFilters().activeCount == 0)
     }
 
-    @Test func profileEditsSendOnlyChangedFields() throws {
-        let profile = Profile(
+    @Test func profileEditsSaveTheWholeProfileAsGrindrsAppDoes() throws {
+        var profile = Profile(
             id: 1, displayName: "Ada", aboutMe: "Hello", age: 30, height: 170, position: .top,
-            lookingFor: [.chat], hivStatus: .preferToDiscuss)
+            tribesImInto: [.bear], lookingFor: [.chat], hivStatus: .preferToDiscuss, instagram: "ada")
+        profile.socialNetworks["twitter"] = "ada_t"
         let original = ProfileEdit(profile)
         #expect(original.hivStatus == nil, "prefer to discuss can be shown but not set")
-        #expect(original.patch(from: original) == nil)
+        #expect(original.update(of: profile) == nil, "nothing changed, nothing sent")
 
         var edit = original
         edit.aboutMe = "  "
         edit.position = nil
         edit.lookingFor = [.friends, .chat]
         edit.age = 31
-        let patch = try #require(edit.patch(from: original))
+        guard case .object(let fields) = try #require(edit.update(of: profile)) else {
+            Issue.record("expected an object")
+            return
+        }
+        #expect(fields["aboutMe"] == .null && fields["sexualPosition"] == .null)
+        #expect(fields["lookingFor"] == .ints([2, 4]) && fields["age"] == .int(31))
+        #expect(fields["displayName"] == .string("Ada"), "unchanged fields are sent as they are")
         #expect(
-            patch
+            fields["hivStatus"] == .int(HIVStatus.preferToDiscuss.rawValue), "and kept when the form can't show them")
+        #expect(fields["tribesImInto"] == .ints([Tribe.bear.rawValue]))
+        #expect(
+            fields["socialNetworks"]
                 == .object([
-                    "aboutMe": .null, "sexualPosition": .null, "lookingFor": .ints([2, 4]), "age": .int(31),
+                    "instagram": .object(["userId": .string("ada")]),
+                    "twitter": .object(["userId": .string("ada_t")]),
                 ]))
         let applied = edit.applied(to: profile)
         #expect(applied.aboutMe == nil && applied.position == nil && applied.age == 31)
         #expect(applied.lookingFor == [.chat, .friends])
+    }
+
+    private func fields(_ body: JSONValue?) -> [String: JSONValue] {
+        if case .object(let fields) = body { return fields }
+        return [:]
     }
 
     @Test func profileTagsAreSentByKey() throws {
@@ -94,11 +110,10 @@ struct RequestTests {
         // Profiles carry either keys or texts; both match the catalog.
         #expect(["Hiking", "coffee", "Unknown"].map(catalog.key(for:)) == ["hiking", "coffee", "Unknown"])
 
-        let original = ProfileEdit(Profile(id: 1, tags: ["hiking", "coffee"]))
-        #expect(original.patch(from: original) == nil)
-        var edit = original
+        let profile = Profile(id: 1, tags: ["hiking", "coffee"])
+        var edit = ProfileEdit(profile)
         edit.tags.remove("hiking")
-        #expect(edit.patch(from: original) == .object(["profileTags": .strings(["coffee"])]))
+        #expect(fields(edit.update(of: profile))["profileTags"] == .strings(["coffee"]))
         #expect(edit.applied(to: Profile(id: 1)).tags == ["coffee"])
 
         edit.tags = Set((0...ProfileEdit.maxTags).map(String.init))
@@ -106,11 +121,12 @@ struct RequestTests {
     }
 
     @Test func gendersAndPronounsAreSentInTheOrderChosen() throws {
-        let original = ProfileEdit(Profile(id: 1, genderIDs: [1], pronounIDs: [1]))
-        var edit = original
+        let profile = Profile(id: 1, genderIDs: [1], pronounIDs: [1])
+        var edit = ProfileEdit(profile)
         edit.genderIDs = [4, 1]
         edit.pronounIDs = []
-        #expect(edit.patch(from: original) == .object(["genders": .ints([4, 1]), "pronouns": .ints([])]))
+        let sent = fields(edit.update(of: profile))
+        #expect(sent["genders"] == .ints([4, 1]) && sent["pronouns"] == .ints([]))
         let applied = edit.applied(to: Profile(id: 1))
         #expect(applied.genderIDs == [4, 1] && applied.pronounIDs.isEmpty)
 

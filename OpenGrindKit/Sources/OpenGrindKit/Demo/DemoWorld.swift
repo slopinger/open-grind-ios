@@ -158,7 +158,7 @@ actor DemoWorld {
 
     // MARK: Changes
 
-    /// Applies a `PATCH /v4/me/profile` body.
+    /// Applies a `PUT /v3.1/me/profile` body.
     func updateMe(_ json: Data) {
         guard let patch = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any] else {
             return
