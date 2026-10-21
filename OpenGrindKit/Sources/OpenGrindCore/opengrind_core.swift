@@ -648,7 +648,9 @@ public protocol CoreClientProtocol: AnyObject, Sendable {
     
     /**
      * Follows the app between foreground (`true`) and background, so token
-     * refreshes and reconnects pause while the app is suspended.
+     * refreshes and reconnects pause while the app is suspended. Coming back
+     * also drops the pooled connections, as upstream Open Grind does: sockets
+     * that idled through a suspend are often dead with neither end knowing.
      */
     func setActive(active: Bool) 
     
@@ -805,7 +807,9 @@ open func request(method: String, path: String, body: RequestBody, authenticated
     
     /**
      * Follows the app between foreground (`true`) and background, so token
-     * refreshes and reconnects pause while the app is suspended.
+     * refreshes and reconnects pause while the app is suspended. Coming back
+     * also drops the pooled connections, as upstream Open Grind does: sockets
+     * that idled through a suspend are often dead with neither end knowing.
      */
 open func setActive(active: Bool)  {try! rustCall() {
         uniffiCallStatus in
@@ -2179,7 +2183,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_opengrind_core_checksum_method_coreclient_request() != 33367) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_opengrind_core_checksum_method_coreclient_set_active() != 57286) {
+    if (uniffi_opengrind_core_checksum_method_coreclient_set_active() != 18837) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_opengrind_core_checksum_method_coreclient_set_listener() != 30877) {

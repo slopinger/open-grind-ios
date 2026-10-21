@@ -514,9 +514,16 @@ impl CoreClient {
     }
 
     /// Follows the app between foreground (`true`) and background, so token
-    /// refreshes and reconnects pause while the app is suspended.
+    /// refreshes and reconnects pause while the app is suspended. Coming back
+    /// also drops the pooled connections, as upstream Open Grind does: sockets
+    /// that idled through a suspend are often dead with neither end knowing.
     pub fn set_active(&self, active: bool) {
+        let resuming = active && !self.client.is_active();
         self.client.set_active(active);
+        if resuming {
+            let client = self.client.clone();
+            RUNTIME.spawn(async move { client.reset_transport().await.ok() });
+        }
     }
 }
 
