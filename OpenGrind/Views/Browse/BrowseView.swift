@@ -79,7 +79,7 @@ struct BrowseView: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 104, maximum: 180), spacing: 2)], spacing: 2) {
                 ForEach(browse.profiles) { profile in
                     NavigationLink(value: profile) {
-                        ProfileTile(profile: profile)
+                        ProfileTile(profile: profile, unreadCount: browse.unreadCount(of: profile))
                             .matchedTransitionSource(id: profile.id, in: transition)
                     }
                     .buttonStyle(.plain)
@@ -210,6 +210,7 @@ private struct BrowseBar: View {
 /// A square photo with name, age, presence and unread count.
 struct ProfileTile: View {
     let profile: GridProfile
+    let unreadCount: Int
 
     var body: some View {
         Color.clear
@@ -262,8 +263,8 @@ struct ProfileTile: View {
                     .foregroundStyle(Color.brand)
                     .shadow(color: .black.opacity(0.4), radius: 1)
             }
-            if profile.unreadCount > 0 {
-                Text(profile.unreadCount, format: .number)
+            if unreadCount > 0 {
+                Text(unreadCount, format: .number)
                     .font(.caption2.bold())
                     .foregroundStyle(Color.brandForeground)
                     .padding(.horizontal, 6)
@@ -280,8 +281,8 @@ struct ProfileTile: View {
         if let distance = Formatting.distance(profile.distance) { parts.append(distance) }
         if profile.isOnline() { parts.append(String(localized: "Online")) }
         if profile.isFavorite { parts.append(String(localized: "Favorite")) }
-        if profile.unreadCount > 0 {
-            parts.append(String(localized: "\(profile.unreadCount) unread messages"))
+        if unreadCount > 0 {
+            parts.append(String(localized: "\(unreadCount) unread messages"))
         }
         return Text(parts.joined(separator: ", "))
     }

@@ -97,7 +97,6 @@ public final class AccountSession {
     func receive(_ event: RealtimeEvent) {
         inbox.handle(event)
         interest.handle(event)
-        browse.handle(event)
         for chat in chats.values {
             chat.handle(event)
         }

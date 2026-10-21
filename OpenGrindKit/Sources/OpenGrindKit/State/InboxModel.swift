@@ -6,7 +6,14 @@ import Observation
 @Observable
 public final class InboxModel {
     /// Pinned first, then most recent first.
-    public private(set) var conversations: [Conversation] = []
+    public private(set) var conversations: [Conversation] = [] {
+        didSet {
+            unreadByConversation = Dictionary(
+                conversations.map { ($0.id, $0.unreadCount) }, uniquingKeysWith: { first, _ in first })
+        }
+    }
+    /// For looking up one conversation's count, e.g. on every grid tile.
+    private var unreadByConversation: [String: Int] = [:]
     public private(set) var state: LoadState = .idle
     public private(set) var isLoadingMore = false
     public private(set) var filter = InboxFilter()
@@ -30,6 +37,11 @@ public final class InboxModel {
     /// Unread messages across the inbox, for the tab badge.
     public var unreadCount: Int {
         conversations.filter { !$0.isMuted }.reduce(0) { $0 + $1.unreadCount }
+    }
+
+    /// Unread messages from `profileID`, if the inbox has loaded that conversation.
+    public func unreadCount(from profileID: ProfileID) -> Int? {
+        unreadByConversation[Conversation.id(between: me, and: profileID)]
     }
 
     public var canLoadMore: Bool { nextPage != nil }

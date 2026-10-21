@@ -157,6 +157,25 @@ struct ModelTests {
         #expect(inbox.conversations.map(\.id) == ["1:2"])
     }
 
+    @Test func gridBadgesFollowTheInbox() async {
+        let transport = FakeTransport { _ in
+            .json(
+                #"{"entries":[{"type":"full_conversation_v1","data":{"conversationId":"1:2","name":"B","participants":[],"lastActivityTimestamp":4000,"unreadCount":0}}],"nextPage":null}"#
+            )
+        }
+        let session = session(transport)
+        let tile = GridProfile(id: 2, unreadCount: 5)
+        let stranger = GridProfile(id: 3, unreadCount: 1)
+        #expect(session.browse.unreadCount(of: tile) == 5, "the grid's count until the inbox has loaded")
+
+        await session.inbox.refresh()
+        session.simulate(.message(message("m", from: 2, at: 6, "hi")))
+        #expect(session.browse.unreadCount(of: tile) == 1)
+        session.inbox.markRead("1:2")
+        #expect(session.browse.unreadCount(of: tile) == 0, "reading the chat clears the tile")
+        #expect(session.browse.unreadCount(of: stranger) == 1)
+    }
+
     @Test func pinnedConversationsStayOnTopAndFailedActionsRollBack() async {
         let transport = FakeTransport { _ in
             .json(
