@@ -18,6 +18,7 @@ public final class AccountSession {
 
     @ObservationIgnored private var chats: [String: ChatModel] = [:]
     @ObservationIgnored private var lastLocationUpdate: Date?
+    @ObservationIgnored private var isUpdatingLocation = false
     @ObservationIgnored private let location: any LocationProviding
 
     init(
@@ -60,10 +61,15 @@ public final class AccountSession {
     /// Sends your location to Grindr at most every five minutes, so others see
     /// a current distance.
     func updateLocationIfNeeded() async {
+        // At launch, starting and becoming active both ask at once.
+        guard !isUpdatingLocation else { return }
         if let lastLocationUpdate, Date.now.timeIntervalSince(lastLocationUpdate) < 300 { return }
-        guard let geohash = try? await location.currentGeohash() else { return }
+        isUpdatingLocation = true
+        defer { isUpdatingLocation = false }
+        guard let geohash = try? await location.currentGeohash(),
+            (try? await api.updateLocation(geohash: geohash)) != nil
+        else { return }
         lastLocationUpdate = .now
-        try? await api.updateLocation(geohash: geohash)
     }
 
     // MARK: Chats
