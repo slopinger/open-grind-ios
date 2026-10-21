@@ -47,7 +47,7 @@ actor DemoWorld {
     private var hidden: Set<ProfileID> = []
     private var photoSeeds: [String: String] = [:]
     private var nextMediaID = 1
-    private var uploads: [Int: Data] = [:]
+    /// Uploaded photos by their hash, for profile photos and chat photos alike.
     private var uploadedPhotos: [String: Data] = [:]
     private let now: Date
 
@@ -341,16 +341,19 @@ actor DemoWorld {
     func upload(_ data: Data) -> (mediaID: Int, url: URL, hash: String) {
         let mediaID = nextMediaID
         nextMediaID += 1
-        uploads[mediaID] = data
-        let hash = String(repeating: "f", count: 32) + String(format: "%08x", mediaID)
+        let hash = Self.uploadHash(mediaID)
         uploadedPhotos[hash] = data
         return (mediaID, MediaURL.profileImage(hash, size: .full), hash)
     }
 
     private func uploadURL(_ mediaID: Int) -> URL? {
-        guard uploads[mediaID] != nil else { return nil }
-        return MediaURL.profileImage(
-            String(repeating: "f", count: 32) + String(format: "%08x", mediaID), size: .full)
+        let hash = Self.uploadHash(mediaID)
+        return uploadedPhotos[hash] == nil ? nil : MediaURL.profileImage(hash, size: .full)
+    }
+
+    /// Uploads get made-up hashes that can't clash with the generated ones.
+    private static func uploadHash(_ mediaID: Int) -> String {
+        String(repeating: "f", count: 32) + String(format: "%08x", mediaID)
     }
 
     // MARK: Generation
