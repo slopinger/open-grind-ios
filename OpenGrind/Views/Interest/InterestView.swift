@@ -57,12 +57,7 @@ struct InterestView: View {
                             .accessibilityLabel(type.localizedName)
                     }
                     if tap.isMutual {
-                        Text("Mutual")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.brandForeground)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .background(Color.brand, in: .capsule)
+                        BrandBadge(Text("Mutual"))
                     }
                 }
                 if tap.isViewable {
@@ -135,9 +130,7 @@ private struct InterestRow<Accessory: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Avatar(photoHash: photoHash, size: 52, isOnline: isOnline)
-                .blur(radius: isLocked ? 8 : 0)
-                .clipShape(.circle)
+            Avatar(photoHash: photoHash, size: 52, isOnline: isOnline, isLocked: isLocked)
             VStack(alignment: .leading, spacing: 2) {
                 Text(isLocked ? String(localized: "Someone") : Formatting.name(name))
                     .font(.body.weight(.medium))

@@ -264,12 +264,7 @@ struct ProfileTile: View {
                     .shadow(color: .black.opacity(0.4), radius: 1)
             }
             if unreadCount > 0 {
-                Text(unreadCount, format: .number)
-                    .font(.caption2.bold())
-                    .foregroundStyle(Color.brandForeground)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.brand, in: .capsule)
+                BrandBadge(Text(unreadCount, format: .number), isSmall: true)
             }
         }
         .padding(5)

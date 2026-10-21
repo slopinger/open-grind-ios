@@ -89,12 +89,15 @@ struct Avatar: View {
     let photoHash: String?
     var size: CGFloat = 52
     var isOnline = false
+    /// Blurred, for profiles Grindr only shows with a subscription.
+    var isLocked = false
 
     var body: some View {
         RemoteImage(
             url: photoHash.map { MediaURL.profileImage($0, size: .thumbnail) }, pointSize: size
         )
         .frame(width: size, height: size)
+        .blur(radius: isLocked ? 8 : 0)
         .clipShape(.circle)
         .overlay(alignment: .bottomTrailing) {
             if isOnline {

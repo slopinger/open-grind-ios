@@ -195,10 +195,8 @@ struct ConversationRow: View {
         HStack(spacing: 12) {
             Avatar(
                 photoHash: conversation.participant?.photoHash, size: 56,
-                isOnline: conversation.participant?.isOnline() ?? false
+                isOnline: conversation.participant?.isOnline() ?? false, isLocked: conversation.isLocked
             )
-            .blur(radius: conversation.isLocked ? 8 : 0)
-            .clipShape(.circle)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -262,14 +260,7 @@ struct UnreadBadge: View {
     var isMuted = false
 
     var body: some View {
-        Text(count, format: .number)
-            .font(.caption.weight(.semibold))
-            .monospacedDigit()
-            .foregroundStyle(isMuted ? Color.white : Color.brandForeground)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .frame(minWidth: 22)
-            .background(isMuted ? Color.secondary : Color.brand, in: .capsule)
+        BrandBadge(Text(count, format: .number), isMuted: isMuted)
             .accessibilityLabel("\(count) unread")
     }
 }

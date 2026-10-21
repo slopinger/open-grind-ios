@@ -86,12 +86,7 @@ struct EditPhotosView: View {
             }
             .overlay(alignment: .topLeading) {
                 if index == 0 {
-                    Text("Main")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Color.brandForeground)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Color.brand, in: .capsule)
+                    BrandBadge(Text("Main"), isSmall: true)
                         .padding(6)
                 }
             }
