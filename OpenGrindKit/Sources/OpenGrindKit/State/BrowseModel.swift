@@ -132,10 +132,16 @@ public final class BrowseModel {
     func handle(_ event: RealtimeEvent) {
         switch event {
         case .message(let message):
-            guard let index = profiles.firstIndex(where: { $0.id == message.senderID }),
-                session?.inbox.openConversationID != message.conversationID
+            guard let index = profiles.firstIndex(where: { $0.id == message.senderID }), let inbox = session?.inbox
             else { return }
-            profiles[index].unreadCount += 1
+            // The inbox has seen the message already and knows reactions, unsends and repeats.
+            if let conversation = inbox.conversations.first(where: { $0.id == message.conversationID }) {
+                profiles[index].unreadCount = conversation.unreadCount
+            } else if message.retractedMessageID == nil, message.content != .unsent,
+                inbox.openConversationID != message.conversationID
+            {
+                profiles[index].unreadCount += 1
+            }
         case .conversationRead(let conversationID, let reader, _) where reader == session?.profileID:
             guard let other = Conversation.otherProfileID(in: conversationID, me: reader),
                 let index = profiles.firstIndex(where: { $0.id == other })
