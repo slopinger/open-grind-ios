@@ -148,12 +148,19 @@ private final class Listener: CoreListener, @unchecked Sendable {
     private var backlog: [TransportEvent] = []
 
     func setHandler(_ handler: @escaping @Sendable (TransportEvent) -> Void) {
-        let backlog = lock.withLock {
-            self.handler = handler
-            defer { self.backlog = [] }
-            return self.backlog
+        // Events that arrive while the backlog is replayed join it, so they come after the older ones.
+        while true {
+            let pending: [TransportEvent]? = lock.withLock {
+                if backlog.isEmpty {
+                    self.handler = handler
+                    return nil
+                }
+                defer { backlog = [] }
+                return backlog
+            }
+            guard let pending else { return }
+            pending.forEach(handler)
         }
-        backlog.forEach(handler)
     }
 
     private func emit(_ event: TransportEvent) {
