@@ -48,6 +48,8 @@ struct ProfilePager: View {
             }
             .routeDestinations()
         }
+        // Its own: the tab view's is under this cover.
+        .photoViewerHost()
         .navigationTransition(.zoom(sourceID: shown, in: transition))
         .task(id: shown) {
             // More of the grid, as when scrolling it, so swiping doesn't run out early.

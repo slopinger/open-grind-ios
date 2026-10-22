@@ -1,34 +1,87 @@
 import OpenGrindKit
 import SwiftUI
 
+/// Photos to show full screen.
+struct ShownPhotos: Identifiable {
+    let urls: [URL]
+    let selection: Int
+    /// Off for view-once photos, which mustn't be kept.
+    let cachesImages: Bool
+    let id = UUID()
+}
+
+/// Opens photos full screen, over whatever has ``View/photoViewerHost()``,
+/// bars included.
+@MainActor @Observable
+final class PhotoViewerPresenter {
+    fileprivate(set) var shown: ShownPhotos?
+
+    func show(_ urls: [URL], at selection: Int = 0, cachesImages: Bool = true) {
+        // The keyboard is above every view and would stay up over the photo.
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        withAnimation(.easeOut(duration: 0.2)) {
+            shown = ShownPhotos(urls: urls, selection: selection, cachesImages: cachesImages)
+        }
+    }
+
+    fileprivate func close() {
+        withAnimation(.easeOut(duration: 0.2)) { shown = nil }
+    }
+}
+
+extension View {
+    /// Shows photos opened with ``PhotoViewerPresenter`` over this view. An
+    /// overlay rather than a full-screen cover, so what they were opened from
+    /// shows through while pulling them away: a clear presentation background
+    /// also took the background off the profile's own full-screen cover.
+    func photoViewerHost() -> some View {
+        modifier(PhotoViewerHost())
+    }
+}
+
+private struct PhotoViewerHost: ViewModifier {
+    @State private var presenter = PhotoViewerPresenter()
+
+    func body(content: Content) -> some View {
+        content
+            .environment(presenter)
+            .accessibilityHidden(presenter.shown != nil)
+            .overlay {
+                if let shown = presenter.shown {
+                    PhotoViewer(urls: shown.urls, selection: shown.selection) { presenter.close() }
+                        .environment(\.cachesImages, shown.cachesImages)
+                        .id(shown.id)
+                        .transition(.opacity)
+                }
+            }
+    }
+}
+
 /// Photos full screen: swipe between them, pinch or double-tap to zoom, swipe
 /// up or down to close.
-struct PhotoViewer: View {
+private struct PhotoViewer: View {
     let urls: [URL]
     @State var selection: Int
+    let close: () -> Void
     /// How far the photo is pulled towards closing, from 0 to 1: it shrinks and
     /// the controls fade.
     @State private var pull: Double = 0
 
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
         TabView(selection: $selection) {
             ForEach(urls.indices, id: \.self) { index in
-                ZoomablePhoto(url: urls[index], pull: $pull) { dismiss() }
+                ZoomablePhoto(url: urls[index], pull: $pull, close: close)
                     .tag(index)
             }
         }
         .tabViewStyle(.page(indexDisplayMode: urls.count > 1 && pull == 0 ? .always : .never))
-        // Solid: a clear presentation background, to see the profile while pulling,
-        // took the background off the profile's own full-screen cover as well.
-        .background(.black)
+        // Gone within a short pull, to show what the photo was opened from.
+        .background(.black.opacity(max(1 - pull * 5, 0)))
         .ignoresSafeArea()
-        .accessibilityAction(.escape) { dismiss() }
+        .accessibilityAddTraits(.isModal)
+        .accessibilityAction(.escape, close)
         .overlay(alignment: .topTrailing) {
-            Button {
-                dismiss()
-            } label: {
+            Button(action: close) {
                 Image(systemName: "xmark")
                     .font(.body.weight(.semibold))
                     .frame(width: 44, height: 44)
@@ -119,9 +172,10 @@ private struct ZoomablePhoto: View {
     }
 }
 
-/// A pan that only starts when it moves more up or down than sideways, so the
-/// pager under it still gets sideways swipes. A SwiftUI drag gesture can't
-/// decline a touch that way: it took every swipe from the pager.
+/// A one-finger pan that only starts when it moves more up or down than
+/// sideways, so the pager under it still gets sideways swipes and a pinch still
+/// zooms. A SwiftUI drag gesture can't decline a touch that way: it took every
+/// swipe from the pager.
 private struct VerticalPan: UIGestureRecognizerRepresentable {
     var isEnabled: Bool
     let changed: (CGSize) -> Void
@@ -133,6 +187,7 @@ private struct VerticalPan: UIGestureRecognizerRepresentable {
 
     func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
         let pan = UIPanGestureRecognizer()
+        pan.maximumNumberOfTouches = 1
         pan.delegate = context.coordinator
         return pan
     }
@@ -158,17 +213,18 @@ private struct VerticalPan: UIGestureRecognizerRepresentable {
     @MainActor
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
-            guard let pan = recognizer as? UIPanGestureRecognizer else { return false }
+            guard let pan = recognizer as? UIPanGestureRecognizer, pan.numberOfTouches == 1 else { return false }
             let velocity = pan.velocity(in: pan.view)
             return abs(velocity.y) > abs(velocity.x)
         }
 
-        /// The pager waits for this pan to decline before it scrolls, so a vertical
-        /// swipe doesn't move it too.
+        /// Everything else waits for this pan to decline: the pager, so a vertical
+        /// swipe doesn't move it too, and the profile cover's own swipe down, which
+        /// would zoom the whole profile back into the grid.
         func gestureRecognizer(
             _ recognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer
         ) -> Bool {
-            other.view is UIScrollView
+            true
         }
     }
 }

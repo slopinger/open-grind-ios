@@ -2,13 +2,6 @@ import MapKit
 import OpenGrindKit
 import SwiftUI
 
-/// A photo from a message, opened full screen.
-struct OpenedPhoto: Identifiable {
-    var url: URL
-    var isViewOnce: Bool
-    var id: URL { url }
-}
-
 /// One message: its bubble, delivery state and actions.
 struct MessageRow: View {
     let chat: ChatModel
@@ -17,9 +10,6 @@ struct MessageRow: View {
     let startsGroup: Bool
     let endsGroup: Bool
     let showsReadReceipt: Bool
-    /// A binding rather than a closure: a new closure on every update of the chat
-    /// would count as a change and redraw every row.
-    @Binding var openedPhoto: OpenedPhoto?
 
     @State private var isConfirmingUnsend = false
 
@@ -31,7 +21,7 @@ struct MessageRow: View {
             HStack(alignment: .bottom, spacing: 6) {
                 if isOutgoing { Spacer(minLength: 48) }
                 if item.delivery == .failed { failedButton }
-                MessageBubble(item: item, isOutgoing: isOutgoing, openedPhoto: $openedPhoto)
+                MessageBubble(item: item, isOutgoing: isOutgoing)
                     .overlay(alignment: isOutgoing ? .bottomLeading : .bottomTrailing) {
                         if !message.reactions.isEmpty { reactionBadge }
                     }
@@ -157,9 +147,11 @@ struct MessageRow: View {
 private struct MessageBubble: View {
     let item: ChatModel.Item
     let isOutgoing: Bool
-    @Binding var openedPhoto: OpenedPhoto?
 
     @Environment(\.openURL) private var openURL
+    /// The same one throughout, so rows don't redraw for it, as they would for a
+    /// new closure on every update of the chat.
+    @Environment(PhotoViewerPresenter.self) private var photoViewer: PhotoViewerPresenter?
 
     var body: some View {
         if let data = item.localPhoto {
@@ -197,7 +189,7 @@ private struct MessageBubble: View {
         case .expiringImage(let url):
             if let url {
                 Button {
-                    openedPhoto = OpenedPhoto(url: url, isViewOnce: true)
+                    photoViewer?.show([url], cachesImages: false)
                 } label: {
                     unsupportedBubble("Expiring Photo", systemImage: "timer", detail: "Tap to view")
                 }
@@ -243,7 +235,7 @@ private struct MessageBubble: View {
 
     private func photo(url: URL, width: Int?, height: Int?, opensViewer: Bool = true) -> some View {
         Button {
-            if opensViewer { openedPhoto = OpenedPhoto(url: url, isViewOnce: false) }
+            if opensViewer { photoViewer?.show([url]) }
         } label: {
             RemoteImage(url: url, pointSize: Self.pointSize(width, height))
                 .frame(width: 220, height: 220 / Self.ratio(width, height))

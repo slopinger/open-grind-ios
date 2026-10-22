@@ -114,6 +114,11 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   photos page vertically. Never push a zoom-transitioned screen that hides the tab bar: the tab bar got stuck
   hidden after zooming back (iOS 26), hence the cover. Pushed profiles (Messages, Interest) and chats hide it;
   the tab bar doesn't minimize on scroll.
+- The full-screen photo viewer is an overlay (`photoViewerHost()` on `MainTabView` and on `ProfilePager`, opened
+  through the `PhotoViewerPresenter` in the environment), not a `fullScreenCover`: its black fades within a short
+  pull to show the profile or chat behind it. A nested cover with `presentationBackground(.clear)` also took the
+  background off the profile cover. Its pull-to-close pan makes every other gesture wait (pager, pinch, the
+  profile cover's own zoom-back swipe).
 - Large titles: no custom top bars as `safeAreaInset` with `.background(.bar)` under a navigation bar (it
   ignores all safe area edges by default and covers the large title under iOS 26+'s transparent navigation
   bar). Browse has no navigation bar or title at all: its explore field and filter chips are pinned with

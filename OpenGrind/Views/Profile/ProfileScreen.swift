@@ -40,8 +40,8 @@ private struct ProfileContent: View {
 
     @Environment(AccountSession.self) private var session
     @Environment(\.dismiss) private var dismiss
+    @Environment(PhotoViewerPresenter.self) private var photoViewer: PhotoViewerPresenter?
     @State private var selectedPhoto: String?
-    @State private var viewerPhoto: PhotoSelection?
     @State private var isConfirmingBlock = false
     @State private var isConfirmingHide = false
     @State private var isReporting = false
@@ -117,12 +117,6 @@ private struct ProfileContent: View {
                 hasBlocked = try await model.report(report, alsoBlock: alsoBlock)
             }
         }
-        .fullScreenCover(item: $viewerPhoto) { selection in
-            let photos = visiblePhotos
-            PhotoViewer(
-                urls: photos.map { MediaURL.profileImage($0.mediaHash, size: .full) },
-                selection: photos.firstIndex { $0.id == selection.id } ?? 0)
-        }
         .alert("You Tapped Each Other", isPresented: $isShowingMutualTap) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -157,7 +151,9 @@ private struct ProfileContent: View {
                         LazyVStack(spacing: 0) {
                             ForEach(photos) { photo in
                                 Button {
-                                    viewerPhoto = PhotoSelection(id: photo.id)
+                                    photoViewer?.show(
+                                        photos.map { MediaURL.profileImage($0.mediaHash, size: .full) },
+                                        at: photos.firstIndex(of: photo) ?? 0)
                                 } label: {
                                     RemoteImage(
                                         url: MediaURL.profileImage(photo.mediaHash, size: .full), pointSize: 500
@@ -273,11 +269,6 @@ private struct ProfileContent: View {
             }
         }
     }
-}
-
-/// Identifies the photo opened full screen.
-private struct PhotoSelection: Identifiable {
-    var id: String
 }
 
 /// Which of the profile's photos is shown, as dots down the side.
