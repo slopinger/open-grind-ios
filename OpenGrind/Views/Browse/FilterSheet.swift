@@ -27,6 +27,7 @@ struct FilterSheet: View {
                     Toggle("Online Now", isOn: $filters.onlineOnly)
                     Toggle("With Photos", isOn: $filters.photosOnly)
                     Toggle("With Face Photos", isOn: $filters.facePhotosOnly)
+                    Toggle("With Albums", isOn: $filters.albumsOnly)
                     Toggle("Favorites", isOn: $filters.favoritesOnly)
                     Toggle("Not Chatted Today", isOn: $filters.notChattedToday)
                 }
@@ -47,6 +48,7 @@ struct FilterSheet: View {
                 }
 
                 Section("Details") {
+                    GenderFilterRow(selection: $filters.genders)
                     MultiSelectRow(title: "Position", selection: $filters.positions, emptyLabel: "Any")
                     MultiSelectRow(title: "Looking For", selection: $filters.lookingFor, emptyLabel: "Any")
                     MultiSelectRow(title: "Tribes", selection: $filters.tribes, emptyLabel: "Any")
@@ -55,6 +57,9 @@ struct FilterSheet: View {
                         title: "Relationship", selection: $filters.relationshipStatuses, emptyLabel: "Any")
                     MultiSelectRow(title: "Meet At", selection: $filters.meetAt, emptyLabel: "Any")
                     MultiSelectRow(title: "NSFW Pics", selection: $filters.acceptsNSFWPics, emptyLabel: "Any")
+                    MultiSelectRow(
+                        title: "Sexual Health", selection: $filters.sexualHealth,
+                        options: SexualHealthPractice.settableCases, emptyLabel: "Any")
                 }
             }
             .navigationTitle("Filters")
@@ -93,5 +98,46 @@ struct FilterSheet: View {
 
     private func whole(_ range: ClosedRange<Double>) -> ClosedRange<Int> {
         Int(range.lowerBound.rounded())...Int(range.upperBound.rounded())
+    }
+}
+
+/// Opens a checklist of the genders to filter by, from Grindr's catalog.
+private struct GenderFilterRow: View {
+    @Binding var selection: Set<Int>
+
+    @Environment(AccountSession.self) private var session
+
+    var body: some View {
+        let options = Gender.filterOptions(session.catalogs.genders)
+        NavigationLink {
+            List {
+                Section {
+                    ForEach(options) { gender in
+                        CheckRow(title: gender.name, isSelected: selection.contains(gender.id)) {
+                            selection.toggle(gender.id)
+                        }
+                    }
+                }
+                if !selection.isEmpty {
+                    Section {
+                        ClearSelectionButton { selection.removeAll() }
+                    }
+                }
+            }
+            .checklistPage("Gender", selection: selection)
+        } label: {
+            LabeledContent("Gender") {
+                let names = options.filter { selection.contains($0.id) }.map(\.name)
+                if names.isEmpty {
+                    Text("Any")
+                } else {
+                    Text(names.formatted(.list(type: .or)))
+                        .lineLimit(1)
+                }
+            }
+        }
+        // The catalog comes with your profile; without it there is nothing to choose.
+        .disabled(options.isEmpty)
+        .task { await session.catalogs.loadIfNeeded() }
     }
 }
