@@ -308,7 +308,7 @@ public final class DemoTransport: GrindrTransport, @unchecked Sendable {
         filters.onlineOnly = query["onlineOnly"] == "true"
         filters.photosOnly = query["photoOnly"] == "true"
         filters.facePhotosOnly = query["faceOnly"] == "true"
-        filters.favoritesOnly = query["isFavorites"] == "true"
+        filters.favoritesOnly = query["favorites"] == "true"
         if let min = query["ageMin"].flatMap(Int.init), let max = query["ageMax"].flatMap(Int.init),
             min <= max
         {

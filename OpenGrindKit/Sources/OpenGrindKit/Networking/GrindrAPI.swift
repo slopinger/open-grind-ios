@@ -26,8 +26,7 @@ public struct GrindrAPI: Sendable {
         case .exploring(let geohash):
             query = [URLQueryItem(name: "exploreGeoHash", value: Geohash.coarsen(geohash))]
         }
-        query += filters.queryItems()
-        if let page { query.append(URLQueryItem(name: "pageNumber", value: String(page))) }
+        query += filters.queryItems(page: page)
         return try await decode(CascadePage.self, APIRequest(.get, "/v4/cascade", query: query))
     }
 

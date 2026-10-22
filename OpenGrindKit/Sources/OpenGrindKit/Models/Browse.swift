@@ -162,8 +162,12 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
         ].filter { $0 }.count
     }
 
-    /// Query items for `GET /v4/cascade`.
-    func queryItems() -> [URLQueryItem] {
+    /// Query items for `GET /v4/cascade`, after the geohash, with the page.
+    ///
+    /// Names and order as the official app's `CascadeRequest.toQueryMap()` (26.16),
+    /// which the app sends as is: its property names (`isFavorites`, `heightInCmMin`)
+    /// are not the query names.
+    func queryItems(page: Int?) -> [URLQueryItem] {
         var items: [URLQueryItem] = []
         func flag(_ name: String, _ isOn: Bool) {
             if isOn { items.append(URLQueryItem(name: name, value: "true")) }
@@ -178,8 +182,6 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
         }
 
         flag("onlineOnly", onlineOnly)
-        // Names as in the official app's CascadeRequest (26.16).
-        flag("isFavorites", favoritesOnly)
         flag("photoOnly", photosOnly)
         flag("faceOnly", facePhotosOnly)
         flag("notRecentlyChatted", notChattedToday)
@@ -188,25 +190,25 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
             items.append(URLQueryItem(name: "ageMax", value: String(ages.upperBound)))
         }
         if heights != Self.heightBounds {
-            items.append(URLQueryItem(name: "heightInCmMin", value: number(heights.lowerBound)))
-            items.append(URLQueryItem(name: "heightInCmMax", value: number(heights.upperBound)))
+            items.append(URLQueryItem(name: "heightCmMin", value: number(heights.lowerBound)))
+            items.append(URLQueryItem(name: "heightCmMax", value: number(heights.upperBound)))
         }
         if weights != Self.weightBounds {
-            items.append(
-                URLQueryItem(name: "weightInGramsMin", value: number(weights.lowerBound.rounded())))
-            items.append(
-                URLQueryItem(name: "weightInGramsMax", value: number(weights.upperBound.rounded())))
+            items.append(URLQueryItem(name: "weightGramsMin", value: number(weights.lowerBound.rounded())))
+            items.append(URLQueryItem(name: "weightGramsMax", value: number(weights.upperBound.rounded())))
         }
-        list("sexualPositions", positions)
-        list("lookingFor", lookingFor)
         list("tribes", tribes)
-        list("bodyTypes", bodyTypes)
+        list("lookingFor", lookingFor)
         list("relationshipStatuses", relationshipStatuses)
+        list("bodyTypes", bodyTypes)
+        list("sexualPositions", positions)
         list("meetAt", meetAt)
         list("nsfwPics", acceptsNSFWPics)
         if !tags.isEmpty {
             items.append(URLQueryItem(name: "tags", value: tags.sorted().joined(separator: ",")))
         }
+        if let page { items.append(URLQueryItem(name: "pageNumber", value: String(page))) }
+        flag("favorites", favoritesOnly)
         return items
     }
 }

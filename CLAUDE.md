@@ -75,7 +75,9 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
 - Requests match the official Android app (26.16, checked 2026-10-21 against the decompiled APK; see the
   memory note on decompiling): Edit Profile saves the whole profile with `PUT /v3.1/me/profile`
   (`ProfileEdit.update(of:)`, carrying over tribesImInto, socialNetworks, approximateDistance), reports go to
-  `POST /v3.1/flags/{id}`, cascade filters use `isFavorites`, `heightInCmMin/Max`, `weightInGramsMin/Max`,
+  `POST /v3.1/flags/{id}`, cascade filters use the names and order of `CascadeRequest.toQueryMap()` (`favorites`,
+  `heightCmMin/Max`, `weightGramsMin/Max`; not the Kotlin property names `isFavorites`/`heightInCmMin`, a
+  mistake of 2026-10-21 fixed 2026-10-22),
   and every sign-out rotates the device identity (`sign_out_rotating`, as upstream's `forget_account`
   does, for privacy). Check new requests the same way before adding them. The app sends
   no Sift or reCAPTCHA signals (neither does upstream; its reCAPTCHA helper is an Android add-on), and a

@@ -48,14 +48,13 @@ struct RequestTests {
         filters.heights = 170...BrowseFilters.heightBounds.upperBound
         filters.favoritesOnly = true
         filters.tags = ["hiking", "coffee"]
-        let items = Dictionary(
-            uniqueKeysWithValues: filters.queryItems().map { ($0.name, $0.value ?? "") })
-        // The names of the official app's CascadeRequest.
+        let items = filters.queryItems(page: 2).map { "\($0.name)=\($0.value ?? "")" }
+        // Names and order of the official app's CascadeRequest.toQueryMap().
         #expect(
             items == [
-                "onlineOnly": "true", "isFavorites": "true", "ageMin": "25", "ageMax": "40",
-                "sexualPositions": "1,4", "heightInCmMin": "170", "heightInCmMax": "241",
-                "weightInGramsMin": "60000", "weightInGramsMax": "272156", "tags": "coffee,hiking",
+                "onlineOnly=true", "ageMin=25", "ageMax=40", "heightCmMin=170", "heightCmMax=241",
+                "weightGramsMin=60000", "weightGramsMax=272156", "sexualPositions=1,4", "tags=coffee,hiking",
+                "pageNumber=2", "favorites=true",
             ])
         #expect(filters.activeCount == 7)
         #expect(BrowseFilters().activeCount == 0)
