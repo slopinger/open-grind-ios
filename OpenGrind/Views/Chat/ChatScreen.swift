@@ -18,6 +18,8 @@ private struct ChatContent: View {
     let conversation: Conversation?
 
     @Environment(\.scenePhase) private var scenePhase
+    @State private var viewer: OpenedPhoto?
+    @Namespace private var photoTransition
     /// On screen, not covered by a pushed profile.
     @State private var isVisible = false
 
@@ -55,6 +57,14 @@ private struct ChatContent: View {
                 } else {
                     chat.disappeared()
                 }
+            }
+            .fullScreenCover(item: $viewer) { item in
+                PhotoViewer(
+                    photos: [ViewerPhoto(id: item.url.absoluteString, url: item.url)],
+                    selection: .constant(item.url.absoluteString)
+                )
+                .environment(\.cachesImages, !item.isViewOnce)
+                .navigationTransition(.zoom(sourceID: item.url, in: photoTransition))
             }
             .failureAlert($chat.actionFailure)
     }
@@ -143,7 +153,8 @@ private struct ChatContent: View {
                                 $0.message.senderID != item.message.senderID
                                     || $0.message.date.timeIntervalSince(item.message.date) > 600
                             } ?? true,
-                            showsReadReceipt: item.id == lastReadOutgoingID
+                            showsReadReceipt: item.id == lastReadOutgoingID,
+                            openedPhoto: $viewer, photoTransition: photoTransition
                         )
                         .id(item.id)
                     }

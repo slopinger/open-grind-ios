@@ -1,87 +1,38 @@
 import OpenGrindKit
 import SwiftUI
 
-/// Photos to show full screen.
-struct ShownPhotos: Identifiable {
-    let urls: [URL]
-    let selection: Int
-    /// Off for view-once photos, which mustn't be kept.
-    let cachesImages: Bool
-    let id = UUID()
+/// A photo for ``PhotoViewer``, with the ID of the view it zooms out of.
+struct ViewerPhoto: Identifiable {
+    let id: String
+    let url: URL
 }
 
-/// Opens photos full screen, over whatever has ``View/photoViewerHost()``,
-/// bars included.
-@MainActor @Observable
-final class PhotoViewerPresenter {
-    fileprivate(set) var shown: ShownPhotos?
+/// Photos full screen: swipe between them, pinch or double-tap to zoom. Present
+/// it as a full-screen cover with a zoom transition from the photo tapped, and
+/// swiping down shrinks it back into that photo, as profiles do into the grid.
+struct PhotoViewer: View {
+    let photos: [ViewerPhoto]
+    /// The photo on screen, so what it was opened from can follow and the zoom
+    /// back lands on it.
+    @Binding var selection: String?
 
-    func show(_ urls: [URL], at selection: Int = 0, cachesImages: Bool = true) {
-        // The keyboard is above every view and would stay up over the photo.
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        withAnimation(.easeOut(duration: 0.2)) {
-            shown = ShownPhotos(urls: urls, selection: selection, cachesImages: cachesImages)
-        }
-    }
-
-    fileprivate func close() {
-        withAnimation(.easeOut(duration: 0.2)) { shown = nil }
-    }
-}
-
-extension View {
-    /// Shows photos opened with ``PhotoViewerPresenter`` over this view. An
-    /// overlay rather than a full-screen cover, so what they were opened from
-    /// shows through while pulling them away: a clear presentation background
-    /// also took the background off the profile's own full-screen cover.
-    func photoViewerHost() -> some View {
-        modifier(PhotoViewerHost())
-    }
-}
-
-private struct PhotoViewerHost: ViewModifier {
-    @State private var presenter = PhotoViewerPresenter()
-
-    func body(content: Content) -> some View {
-        content
-            .environment(presenter)
-            .accessibilityHidden(presenter.shown != nil)
-            .overlay {
-                if let shown = presenter.shown {
-                    PhotoViewer(urls: shown.urls, selection: shown.selection) { presenter.close() }
-                        .environment(\.cachesImages, shown.cachesImages)
-                        .id(shown.id)
-                        .transition(.opacity)
-                }
-            }
-    }
-}
-
-/// Photos full screen: swipe between them, pinch or double-tap to zoom, swipe
-/// up or down to close.
-private struct PhotoViewer: View {
-    let urls: [URL]
-    @State var selection: Int
-    let close: () -> Void
-    /// How far the photo is pulled towards closing, from 0 to 1: it shrinks and
-    /// the controls fade.
-    @State private var pull: Double = 0
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         TabView(selection: $selection) {
-            ForEach(urls.indices, id: \.self) { index in
-                ZoomablePhoto(url: urls[index], pull: $pull, close: close)
-                    .tag(index)
+            ForEach(photos) { photo in
+                ZoomablePhoto(url: photo.url)
+                    .tag(photo.id as String?)
             }
         }
-        .tabViewStyle(.page(indexDisplayMode: urls.count > 1 && pull == 0 ? .always : .never))
-        // Gone within a short pull, to show what the photo was opened from.
-        .background(.black.opacity(max(1 - pull * 5, 0)))
+        .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .always : .never))
+        .background(.black)
         .ignoresSafeArea()
-        .accessibilityAddTraits(.isModal)
-        .accessibilityAction(.escape, close)
+        .accessibilityAction(.escape) { dismiss() }
         .overlay(alignment: .topTrailing) {
-            Button(action: close) {
+            Button {
+                dismiss()
+            } label: {
                 Image(systemName: "xmark")
                     .font(.body.weight(.semibold))
                     .frame(width: 44, height: 44)
@@ -90,7 +41,6 @@ private struct PhotoViewer: View {
             .buttonBorderShape(.circle)
             .tint(.white)
             .padding()
-            .opacity(1 - pull)
             .accessibilityLabel("Close")
         }
         .environment(\.colorScheme, .dark)
@@ -98,133 +48,127 @@ private struct PhotoViewer: View {
     }
 }
 
+/// One photo, zoomable once the large version has loaded.
 private struct ZoomablePhoto: View {
     let url: URL
-    @Binding var pull: Double
-    let close: () -> Void
 
-    @State private var scale: CGFloat = 1
-    @State private var committedScale: CGFloat = 1
-    @State private var offset: CGSize = .zero
-    @State private var committedOffset: CGSize = .zero
+    private static let pointSize: CGFloat = 1024
+
+    @Environment(\.imagePipeline) private var pipeline
+    @Environment(\.cachesImages) private var cachesImages
+    @Environment(\.displayScale) private var displayScale
+    @State private var image: UIImage?
 
     var body: some View {
-        RemoteImage(url: url, pointSize: 1024, contentMode: .fit)
-            .scaleEffect(scale * CGFloat(1 - pull * 0.3))
-            .offset(offset)
-            .gesture(
-                MagnifyGesture()
-                    .onChanged { value in scale = min(max(committedScale * value.magnification, 1), 4) }
-                    .onEnded { _ in
-                        committedScale = scale
-                        if scale == 1 { reset() }
-                    }
-            )
-            .simultaneousGesture(scale > 1 ? pan : nil)
-            .gesture(VerticalPan(isEnabled: scale == 1, changed: pullChanged, ended: pullEnded))
-            .onTapGesture(count: 2) {
-                withAnimation(.spring) {
-                    if scale > 1 {
-                        reset()
-                    } else {
-                        scale = 2.5
-                        committedScale = 2.5
-                    }
-                }
-            }
-            .accessibilityAddTraits(.isImage)
-            .accessibilityLabel("Photo")
-    }
-
-    private var pan: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                offset = CGSize(
-                    width: committedOffset.width + value.translation.width,
-                    height: committedOffset.height + value.translation.height)
-            }
-            .onEnded { _ in committedOffset = offset }
-    }
-
-    /// Pulling up or down to close: the photo follows the finger.
-    private func pullChanged(_ moved: CGSize) {
-        offset = moved
-        pull = min(Double(abs(moved.height)) / 400, 1)
-    }
-
-    /// Far or fast enough closes, otherwise the photo springs back.
-    private func pullEnded(_ moved: CGSize, velocity: CGSize) {
-        if abs(moved.height) > 120 || abs(velocity.height) > 800 {
-            close()
-        } else {
-            withAnimation(.spring) {
-                offset = .zero
-                pull = 0
+        Group {
+            if let image {
+                ZoomingImage(image: image)
+            } else {
+                // The size the profile shows, usually in memory already, so the
+                // zoom transition has the photo from the start.
+                RemoteImage(url: url, pointSize: 500, contentMode: .fit)
             }
         }
-    }
-
-    private func reset() {
-        scale = 1
-        committedScale = 1
-        offset = .zero
-        committedOffset = .zero
+        .accessibilityElement()
+        .accessibilityAddTraits(.isImage)
+        .accessibilityLabel("Photo")
+        .task(id: url) {
+            guard let pipeline else { return }
+            let pixels = Int((Self.pointSize * displayScale).rounded(.up))
+            image =
+                cachesImages
+                ? try? await pipeline.image(at: url, maxPixelSize: pixels)
+                : try? await pipeline.uncachedImage(at: url, maxPixelSize: pixels)
+        }
     }
 }
 
-/// A one-finger pan that only starts when it moves more up or down than
-/// sideways, so the pager under it still gets sideways swipes and a pinch still
-/// zooms. A SwiftUI drag gesture can't decline a touch that way: it took every
-/// swipe from the pager.
-private struct VerticalPan: UIGestureRecognizerRepresentable {
-    var isEnabled: Bool
-    let changed: (CGSize) -> Void
-    let ended: (CGSize, _ velocity: CGSize) -> Void
+/// A photo in a zooming scroll view, the standard way to zoom content: it fits
+/// the screen, pinching and double-tapping zoom in, a zoomed photo pans to its
+/// edges before the pager under it moves on, and it bounces like Photos.
+private struct ZoomingImage: UIViewRepresentable {
+    let image: UIImage
 
-    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
-        Coordinator()
+    func makeUIView(context: Context) -> ZoomingImageView {
+        ZoomingImageView()
     }
 
-    func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
-        let pan = UIPanGestureRecognizer()
-        pan.maximumNumberOfTouches = 1
-        pan.delegate = context.coordinator
-        return pan
+    func updateUIView(_ view: ZoomingImageView, context: Context) {
+        view.show(image)
+    }
+}
+
+private final class ZoomingImageView: UIScrollView, UIScrollViewDelegate {
+    private let imageView = UIImageView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        delegate = self
+        maximumZoomScale = 4
+        showsHorizontalScrollIndicator = false
+        showsVerticalScrollIndicator = false
+        contentInsetAdjustmentBehavior = .never
+        decelerationRate = .fast
+        addSubview(imageView)
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(doubleTapped(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        addGestureRecognizer(doubleTap)
     }
 
-    func updateUIGestureRecognizer(_ recognizer: UIPanGestureRecognizer, context: Context) {
-        recognizer.isEnabled = isEnabled
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported")
     }
 
-    func handleUIGestureRecognizerAction(_ recognizer: UIPanGestureRecognizer, context: Context) {
-        let translation = recognizer.translation(in: recognizer.view)
-        let moved = CGSize(width: translation.x, height: translation.y)
-        switch recognizer.state {
-        case .changed:
-            changed(moved)
-        case .ended, .cancelled, .failed:
-            let velocity = recognizer.velocity(in: recognizer.view)
-            ended(moved, CGSize(width: velocity.x, height: velocity.y))
-        default:
-            break
+    func show(_ image: UIImage) {
+        guard image !== imageView.image else { return }
+        zoomScale = minimumZoomScale
+        imageView.image = image
+        imageView.frame = .zero
+        setNeedsLayout()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // Not zoomed: the photo fits the screen, e.g. again after rotating.
+        if zoomScale == minimumZoomScale, let size = imageView.image?.size, size.width > 0, size.height > 0 {
+            let scale = min(bounds.width / size.width, bounds.height / size.height)
+            let fitted = CGSize(width: size.width * scale, height: size.height * scale)
+            if imageView.frame.size != fitted {
+                imageView.frame = CGRect(origin: .zero, size: fitted)
+                contentSize = fitted
+                centerImage()
+                contentOffset = CGPoint(x: -contentInset.left, y: -contentInset.top)
+            }
         }
     }
 
-    @MainActor
-    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-        func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
-            guard let pan = recognizer as? UIPanGestureRecognizer, pan.numberOfTouches == 1 else { return false }
-            let velocity = pan.velocity(in: pan.view)
-            return abs(velocity.y) > abs(velocity.x)
-        }
+    /// Keeps the photo in the middle while it's smaller than the screen.
+    private func centerImage() {
+        let horizontal = max((bounds.width - contentSize.width) / 2, 0)
+        let vertical = max((bounds.height - contentSize.height) / 2, 0)
+        let inset = UIEdgeInsets(top: vertical, left: horizontal, bottom: vertical, right: horizontal)
+        if contentInset != inset { contentInset = inset }
+    }
 
-        /// Everything else waits for this pan to decline: the pager, so a vertical
-        /// swipe doesn't move it too, and the profile cover's own swipe down, which
-        /// would zoom the whole profile back into the grid.
-        func gestureRecognizer(
-            _ recognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer
-        ) -> Bool {
-            true
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        imageView
+    }
+
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        centerImage()
+    }
+
+    /// Zooms in on the spot tapped, or back out.
+    @objc private func doubleTapped(_ tap: UITapGestureRecognizer) {
+        if zoomScale > minimumZoomScale {
+            setZoomScale(minimumZoomScale, animated: true)
+        } else {
+            let point = tap.location(in: imageView)
+            let scale = min(maximumZoomScale, 2.5)
+            let size = CGSize(width: bounds.width / scale, height: bounds.height / scale)
+            zoom(
+                to: CGRect(origin: CGPoint(x: point.x - size.width / 2, y: point.y - size.height / 2), size: size),
+                animated: true)
         }
     }
 }

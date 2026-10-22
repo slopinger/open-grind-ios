@@ -2,6 +2,13 @@ import MapKit
 import OpenGrindKit
 import SwiftUI
 
+/// A photo from a message, opened full screen.
+struct OpenedPhoto: Identifiable {
+    var url: URL
+    var isViewOnce: Bool
+    var id: URL { url }
+}
+
 /// One message: its bubble, delivery state and actions.
 struct MessageRow: View {
     let chat: ChatModel
@@ -10,6 +17,11 @@ struct MessageRow: View {
     let startsGroup: Bool
     let endsGroup: Bool
     let showsReadReceipt: Bool
+    /// A binding rather than a closure: a new closure on every update of the chat
+    /// would count as a change and redraw every row.
+    @Binding var openedPhoto: OpenedPhoto?
+    /// The opened photo zooms out of its bubble and back into it.
+    let photoTransition: Namespace.ID
 
     @State private var isConfirmingUnsend = false
 
@@ -21,12 +33,14 @@ struct MessageRow: View {
             HStack(alignment: .bottom, spacing: 6) {
                 if isOutgoing { Spacer(minLength: 48) }
                 if item.delivery == .failed { failedButton }
-                MessageBubble(item: item, isOutgoing: isOutgoing)
-                    .overlay(alignment: isOutgoing ? .bottomLeading : .bottomTrailing) {
-                        if !message.reactions.isEmpty { reactionBadge }
-                    }
-                    .opacity(item.delivery == .sending ? 0.6 : 1)
-                    .contextMenu { menu }
+                MessageBubble(
+                    item: item, isOutgoing: isOutgoing, openedPhoto: $openedPhoto, photoTransition: photoTransition
+                )
+                .overlay(alignment: isOutgoing ? .bottomLeading : .bottomTrailing) {
+                    if !message.reactions.isEmpty { reactionBadge }
+                }
+                .opacity(item.delivery == .sending ? 0.6 : 1)
+                .contextMenu { menu }
                 if !isOutgoing { Spacer(minLength: 48) }
             }
             if showsReadReceipt || item.delivery == .failed || endsGroup {
@@ -147,11 +161,10 @@ struct MessageRow: View {
 private struct MessageBubble: View {
     let item: ChatModel.Item
     let isOutgoing: Bool
+    @Binding var openedPhoto: OpenedPhoto?
+    let photoTransition: Namespace.ID
 
     @Environment(\.openURL) private var openURL
-    /// The same one throughout, so rows don't redraw for it, as they would for a
-    /// new closure on every update of the chat.
-    @Environment(PhotoViewerPresenter.self) private var photoViewer: PhotoViewerPresenter?
 
     var body: some View {
         if let data = item.localPhoto {
@@ -189,11 +202,12 @@ private struct MessageBubble: View {
         case .expiringImage(let url):
             if let url {
                 Button {
-                    photoViewer?.show([url], cachesImages: false)
+                    openedPhoto = OpenedPhoto(url: url, isViewOnce: true)
                 } label: {
                     unsupportedBubble("Expiring Photo", systemImage: "timer", detail: "Tap to view")
                 }
                 .buttonStyle(.plain)
+                .matchedTransitionSource(id: url, in: photoTransition)
             } else {
                 unsupportedBubble("Expiring Photo", systemImage: "timer", detail: "No longer available")
             }
@@ -235,13 +249,14 @@ private struct MessageBubble: View {
 
     private func photo(url: URL, width: Int?, height: Int?, opensViewer: Bool = true) -> some View {
         Button {
-            if opensViewer { photoViewer?.show([url]) }
+            if opensViewer { openedPhoto = OpenedPhoto(url: url, isViewOnce: false) }
         } label: {
             RemoteImage(url: url, pointSize: Self.pointSize(width, height))
                 .frame(width: 220, height: 220 / Self.ratio(width, height))
                 .clipShape(.rect(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
+        .matchedTransitionSource(id: url, in: photoTransition)
         .disabled(!opensViewer)
         .accessibilityLabel(opensViewer ? "Photo" : "GIF")
     }

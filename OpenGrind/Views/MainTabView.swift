@@ -35,7 +35,6 @@ struct MainTabView: View {
                 MeView()
             }
         }
-        .photoViewerHost()
         .task {
             // Fill the badges right away; your profile has the gender and pronoun names.
             async let inbox: Void = session.inbox.loadIfNeeded()

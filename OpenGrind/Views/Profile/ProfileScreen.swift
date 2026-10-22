@@ -40,8 +40,9 @@ private struct ProfileContent: View {
 
     @Environment(AccountSession.self) private var session
     @Environment(\.dismiss) private var dismiss
-    @Environment(PhotoViewerPresenter.self) private var photoViewer: PhotoViewerPresenter?
+    @Namespace private var photoTransition
     @State private var selectedPhoto: String?
+    @State private var isViewingPhotos = false
     @State private var isConfirmingBlock = false
     @State private var isConfirmingHide = false
     @State private var isReporting = false
@@ -117,6 +118,16 @@ private struct ProfileContent: View {
                 hasBlocked = try await model.report(report, alsoBlock: alsoBlock)
             }
         }
+        .fullScreenCover(isPresented: $isViewingPhotos) {
+            let photos = visiblePhotos
+            // The photos here scroll along, so the zoom back lands on the one shown.
+            PhotoViewer(
+                photos: photos.map { ViewerPhoto(id: $0.id, url: MediaURL.profileImage($0.mediaHash, size: .full)) },
+                selection: $selectedPhoto
+            )
+            // A String, as the sources' IDs are: an optional one wouldn't match them.
+            .navigationTransition(.zoom(sourceID: selectedPhoto ?? photos.first?.id ?? "", in: photoTransition))
+        }
         .alert("You Tapped Each Other", isPresented: $isShowingMutualTap) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -151,9 +162,8 @@ private struct ProfileContent: View {
                         LazyVStack(spacing: 0) {
                             ForEach(photos) { photo in
                                 Button {
-                                    photoViewer?.show(
-                                        photos.map { MediaURL.profileImage($0.mediaHash, size: .full) },
-                                        at: photos.firstIndex(of: photo) ?? 0)
+                                    selectedPhoto = photo.id
+                                    isViewingPhotos = true
                                 } label: {
                                     RemoteImage(
                                         url: MediaURL.profileImage(photo.mediaHash, size: .full), pointSize: 500
@@ -165,6 +175,7 @@ private struct ProfileContent: View {
                                 .buttonStyle(.plain)
                                 .containerRelativeFrame([.horizontal, .vertical])
                                 .clipped()
+                                .matchedTransitionSource(id: photo.id, in: photoTransition)
                                 .accessibilityLabel(
                                     "Photo \((photos.firstIndex(of: photo) ?? 0) + 1) of \(photos.count)"
                                 )
