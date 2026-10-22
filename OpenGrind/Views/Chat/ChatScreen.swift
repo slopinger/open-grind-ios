@@ -18,7 +18,6 @@ private struct ChatContent: View {
     let conversation: Conversation?
 
     @Environment(\.scenePhase) private var scenePhase
-    @FocusState private var isComposerFocused: Bool
     @State private var viewer: OpenedPhoto?
     /// On screen, not covered by a pushed profile.
     @State private var isVisible = false
@@ -36,7 +35,8 @@ private struct ChatContent: View {
             }
             .toolbar(.hidden, for: .tabBar)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                ChatComposer(chat: chat, isFocused: $isComposerFocused)
+                // No focus state here: a change of it would update the whole transcript.
+                ChatComposer(chat: chat)
             }
             .task { await chat.loadIfNeeded() }
             .onAppear {
@@ -113,6 +113,7 @@ private struct ChatContent: View {
         // Read once per update: each row needs its neighbours and the read receipt.
         let items = chat.items
         let lastReadOutgoingID = chat.lastReadOutgoingID
+        let calendar = Calendar.current
         return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 2) {
@@ -129,7 +130,7 @@ private struct ChatContent: View {
                         let previous = index > 0 ? items[index - 1] : nil
                         let next = index + 1 < items.count ? items[index + 1] : nil
                         if previous.map({
-                            !Calendar.current.isDate($0.message.date, inSameDayAs: item.message.date)
+                            !calendar.isDate($0.message.date, inSameDayAs: item.message.date)
                         })
                             ?? true
                         {
@@ -164,6 +165,7 @@ private struct ChatContent: View {
                 .padding(.bottom, 8)
                 .animation(.default, value: chat.isOtherTyping)
             }
+            // Also keeps the newest messages in view as the keyboard comes up.
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: chat.items.last?.id) { _, id in
@@ -172,11 +174,6 @@ private struct ChatContent: View {
             }
             .onChange(of: chat.isOtherTyping) { _, isTyping in
                 if isTyping { withAnimation { proxy.scrollTo("typing", anchor: .bottom) } }
-            }
-            .onChange(of: isComposerFocused) { _, isFocused in
-                if isFocused, let id = chat.items.last?.id {
-                    withAnimation { proxy.scrollTo(id, anchor: .bottom) }
-                }
             }
         }
     }
