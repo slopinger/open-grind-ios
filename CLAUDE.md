@@ -103,7 +103,8 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   as `RangeWheelRow`s, From and To wheels side by side) and is the only way to clear them all (Reset, top left); then only
   the common ones: Online,
   Tags (second, much used), Age (two wheels in a short bottom sheet), Position and Looking For (checklists,
-  several allowed), Favorites. Each applies (and reloads the grid) when its sheet closes.
+  several allowed), Favorites; set ones move to the front, keeping that order. Each sheet has Reset (never
+  "Any", which read as a value) and applies (and reloads the grid) when it closes.
 - Own tags: `profileTags` keys in the profile update (max 10). Profiles carry keys or texts; `MeModel`
   turns yours into keys when it loads (`ProfileTagCatalog.key(for:)`), so `ProfileEdit.tags` are plain keys.
   Genders, pronouns and tags live in `AccountSession.catalogs` (`CatalogModel`), loaded with your profile.

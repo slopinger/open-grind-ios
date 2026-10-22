@@ -2,9 +2,10 @@ import OpenGrindKit
 import SwiftUI
 
 /// A row of chips above the grid that scrolls sideways: the button for every
-/// filter (``FilterSheet``, which also clears them), then the common ones. On-off
-/// filters switch with a tap, age opens two wheels from the bottom of the screen,
-/// and options and tags open a checklist. Every change reloads the grid.
+/// filter (``FilterSheet``, which also clears them), then the common ones, those
+/// that are set first. On-off filters switch with a tap, age opens two wheels
+/// from the bottom of the screen, and options and tags open a checklist. Every
+/// change reloads the grid.
 struct FilterBar: View {
     let filters: BrowseFilters
     let apply: (BrowseFilters) -> Void
@@ -12,23 +13,44 @@ struct FilterBar: View {
     @State private var picker: FilterPicker?
 
     var body: some View {
+        // Set ones first, each group in the usual order.
+        let chips = CommonFilter.allCases.filter(isSet) + CommonFilter.allCases.filter { !isSet($0) }
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
                 allFiltersChip
-                toggle("Online", \.onlineOnly)
-                tagsChip
-                ageChip
-                option(.position, "Position", filters.positions)
-                option(.lookingFor, "Looking For", filters.lookingFor)
-                toggle("Favorites", \.favoritesOnly)
+                ForEach(chips, id: \.self) { chip($0) }
             }
             .padding(.horizontal)
             .padding(.vertical, 4)
+            .animation(.default, value: chips)
         }
         .scrollIndicators(.hidden)
         .sensoryFeedback(.selection, trigger: filters)
         .sheet(item: $picker) { picker in
             sheet(picker)
+        }
+    }
+
+    private func isSet(_ filter: CommonFilter) -> Bool {
+        switch filter {
+        case .online: filters.onlineOnly
+        case .tags: !filters.tags.isEmpty
+        case .age: filters.ages != BrowseFilters.ageBounds
+        case .position: !filters.positions.isEmpty
+        case .lookingFor: !filters.lookingFor.isEmpty
+        case .favorites: filters.favoritesOnly
+        }
+    }
+
+    @ViewBuilder
+    private func chip(_ filter: CommonFilter) -> some View {
+        switch filter {
+        case .online: toggle("Online", \.onlineOnly)
+        case .tags: tagsChip
+        case .age: ageChip
+        case .position: option(.position, "Position", filters.positions)
+        case .lookingFor: option(.lookingFor, "Looking For", filters.lookingFor)
+        case .favorites: toggle("Favorites", \.favoritesOnly)
         }
     }
 
@@ -46,26 +68,29 @@ struct FilterBar: View {
                 .padding(.horizontal)
                 .navigationTitle("Age")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Any") { draft.ages = BrowseFilters.ageBounds }
-                    }
-                }
+            } reset: {
+                $0.ages = BrowseFilters.ageBounds
             }
             .presentationDetents([.height(300)])
         case .position:
             FilterPickerSheet(filters: filters, apply: apply) { $draft in
                 MultiSelectList(title: "Position", selection: $draft.positions, options: Array(SexualPosition.allCases))
+            } reset: {
+                $0.positions = []
             }
             .presentationDetents([.medium, .large])
         case .lookingFor:
             FilterPickerSheet(filters: filters, apply: apply) { $draft in
                 MultiSelectList(title: "Looking For", selection: $draft.lookingFor, options: Array(LookingFor.allCases))
+            } reset: {
+                $0.lookingFor = []
             }
             .presentationDetents([.medium, .large])
         case .tags:
             FilterPickerSheet(filters: filters, apply: apply) { $draft in
                 TagPickerList(selection: $draft.tags)
+            } reset: {
+                $0.tags = []
             }
         }
     }
@@ -132,6 +157,11 @@ struct FilterBar: View {
     }
 }
 
+/// The filters with a chip of their own, in their usual order.
+private enum CommonFilter: CaseIterable {
+    case online, tags, age, position, lookingFor, favorites
+}
+
 /// What a chip opens.
 private enum FilterPicker: String, Identifiable {
     case all, age, position, lookingFor, tags
@@ -172,6 +202,8 @@ private struct FilterChip<Label: View>: View {
 /// when it closes.
 private struct FilterPickerSheet<Content: View>: View {
     let apply: (BrowseFilters) -> Void
+    /// Clears this sheet's filter, for the Reset button.
+    let reset: (inout BrowseFilters) -> Void
     let content: (Binding<BrowseFilters>) -> Content
 
     @Environment(\.dismiss) private var dismiss
@@ -179,17 +211,29 @@ private struct FilterPickerSheet<Content: View>: View {
 
     init(
         filters: BrowseFilters, apply: @escaping (BrowseFilters) -> Void,
-        @ViewBuilder content: @escaping (Binding<BrowseFilters>) -> Content
+        @ViewBuilder content: @escaping (Binding<BrowseFilters>) -> Content,
+        reset: @escaping (inout BrowseFilters) -> Void
     ) {
         self.apply = apply
+        self.reset = reset
         self.content = content
         _draft = State(initialValue: filters)
+    }
+
+    private var cleared: BrowseFilters {
+        var cleared = draft
+        reset(&cleared)
+        return cleared
     }
 
     var body: some View {
         NavigationStack {
             content($draft)
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Reset") { withAnimation { draft = cleared } }
+                            .disabled(cleared == draft)
+                    }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { dismiss() }
                     }
