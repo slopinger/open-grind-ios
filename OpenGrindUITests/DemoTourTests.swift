@@ -31,16 +31,17 @@ final class DemoTourTests: XCTestCase {
         sleep(3)  // Let the photos arrive.
         snapshot(app, "03-browse")
 
-        // The filter chips: on-off ones switch right away, the others open a wheel or list.
-        app.buttons["Online"].tap()
-        sleep(2)
+        app.buttons["Filters"].tap()
+        XCTAssertTrue(app.navigationBars["Filters"].waitForExistence(timeout: 5))
         snapshot(app, "04-filters")
-        app.buttons["Online"].tap()
-        app.buttons["Age"].tap()
-        XCTAssertTrue(app.pickerWheels.firstMatch.waitForExistence(timeout: 5), "The age chip opens wheels")
+        app.buttons["From"].firstMatch.tap()
+        XCTAssertTrue(app.pickerWheels.firstMatch.waitForExistence(timeout: 5), "Tapping a number row opens a wheel")
         snapshot(app, "17-filter-wheel")
-        app.buttons["Done"].tap()
-        app.buttons["Tags"].tap()
+        app.buttons["From"].firstMatch.tap()
+        // In the form, not the Tags chip behind the sheet.
+        let tags = app.collectionViews.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Tags'")).firstMatch
+        for _ in 0..<6 where !tags.isHittable { app.swipeUp() }
+        tags.tap()
         XCTAssertTrue(app.buttons["Hiking"].waitForExistence(timeout: 10), "The tag catalog should load")
         app.buttons["Hiking"].tap()
         app.buttons["Coffee"].tap()
@@ -48,6 +49,13 @@ final class DemoTourTests: XCTestCase {
         // Closing the sheet applies the filters; the rest of the tour wants the whole grid.
         app.buttons["Hiking"].tap()
         app.buttons["Coffee"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["Done"].tap()
+
+        // The common filters are chips too; age opens two wheels from the bottom.
+        app.buttons["Age"].tap()
+        XCTAssertTrue(app.pickerWheels.firstMatch.waitForExistence(timeout: 5), "The age chip opens wheels")
+        snapshot(app, "20-age-chip")
         app.buttons["Done"].tap()
 
         app.buttons["Explore Another Place"].tap()

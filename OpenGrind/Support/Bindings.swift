@@ -24,17 +24,6 @@ extension Binding {
     }
 }
 
-extension Binding {
-    /// The set's element, or `nil` when it's empty, for a wheel that picks one or none.
-    func single<Element: Hashable & Sendable>() -> Binding<Element?> where Value == Set<Element> {
-        Binding<Element?> {
-            wrappedValue.first
-        } set: { element in
-            wrappedValue = element.map { [$0] } ?? []
-        }
-    }
-}
-
 extension Set {
     /// Adds `element`, or removes it if it is there already.
     mutating func toggle(_ element: Element) {

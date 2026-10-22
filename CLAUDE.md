@@ -92,14 +92,14 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   explored place is never persisted. Every end of a session (sign-out, expiry, ban) clears them and
   runs `AccountController.onSignOut`, which empties the image cache.
 - The UI tour also keeps `11-tags`, `12-explore`, `13-exploring`, `14-photos`, `15-photo-menu`,
-  `16-photos-reordered`, `17-filter-wheel`, `18-edit-profile`, `19-age-wheel`.
+  `16-photos-reordered`, `17-filter-wheel`, `18-edit-profile`, `19-age-wheel`, `20-age-chip`.
 - Form conventions: every option list (single or multiple choice, tags) opens its own page; numbers
   (age, height, weight) use `WheelPickerRow`, which opens a wheel below the row, one at a time per form.
   Photos are edited from Edit Profile and save immediately.
-- Grid filters are a sideways row of chips (`FilterBar`, as in Grindr's app): on-off filters switch on
-  tap, ranges open two wheels and options (position, tribes, …) one wheel with "Any" in a short bottom
-  sheet, tags open the tag list; each applies (and reloads the grid) when its sheet closes. An option
-  wheel picks one value, so option filters hold at most one now (`Binding.single()`).
+- Grid filters: a sideways row of chips (`FilterBar`, as in Grindr's app) starts with the Filters button
+  (with the active count), which opens `FilterSheet` with every filter; then only the common ones: Online,
+  Tags (second, much used), Age (two wheels in a short bottom sheet), Position and Looking For (checklists,
+  several allowed), Favorites. Each applies (and reloads the grid) when its sheet closes.
 - Own tags: `profileTags` keys in the profile update (max 10). Profiles carry keys or texts; `MeModel`
   turns yours into keys when it loads (`ProfileTagCatalog.key(for:)`), so `ProfileEdit.tags` are plain keys.
   Genders, pronouns and tags live in `AccountSession.catalogs` (`CatalogModel`), loaded with your profile.

@@ -152,6 +152,16 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
     /// No filter is set.
     public var isDefault: Bool { self == BrowseFilters() }
 
+    /// How many filters are set, for the count on the filters button.
+    public var activeCount: Int {
+        [
+            onlineOnly, photosOnly, facePhotosOnly, favoritesOnly, notChattedToday,
+            ages != Self.ageBounds, heights != Self.heightBounds, weights != Self.weightBounds,
+            !positions.isEmpty, !lookingFor.isEmpty, !tribes.isEmpty, !bodyTypes.isEmpty,
+            !relationshipStatuses.isEmpty, !meetAt.isEmpty, !acceptsNSFWPics.isEmpty, !tags.isEmpty,
+        ].filter { $0 }.count
+    }
+
     /// Query items for `GET /v4/cascade`.
     func queryItems() -> [URLQueryItem] {
         var items: [URLQueryItem] = []
