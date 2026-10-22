@@ -94,8 +94,12 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
 - The UI tour also keeps `11-tags`, `12-explore`, `13-exploring`, `14-photos`, `15-photo-menu`,
   `16-photos-reordered`, `17-filter-wheel`, `18-edit-profile`, `19-age-wheel`.
 - Form conventions: every option list (single or multiple choice, tags) opens its own page; numbers
-  (age, height, weight, filter ranges) use `WheelPickerRow`, which opens a wheel below the row, one at
-  a time per form. Photos are edited from Edit Profile and save immediately.
+  (age, height, weight) use `WheelPickerRow`, which opens a wheel below the row, one at a time per form.
+  Photos are edited from Edit Profile and save immediately.
+- Grid filters are a sideways row of chips (`FilterBar`, as in Grindr's app): on-off filters switch on
+  tap, ranges open two wheels and options (position, tribes, …) one wheel with "Any" in a short bottom
+  sheet, tags open the tag list; each applies (and reloads the grid) when its sheet closes. An option
+  wheel picks one value, so option filters hold at most one now (`Binding.single()`).
 - Own tags: `profileTags` keys in the profile update (max 10). Profiles carry keys or texts; `MeModel`
   turns yours into keys when it loads (`ProfileTagCatalog.key(for:)`), so `ProfileEdit.tags` are plain keys.
   Genders, pronouns and tags live in `AccountSession.catalogs` (`CatalogModel`), loaded with your profile.
@@ -105,7 +109,8 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   photos page vertically. Never push a zoom-transitioned screen that hides the tab bar: the tab bar got stuck
   hidden after zooming back (iOS 26), hence the cover. Pushed profiles (Messages, Interest) and chats hide it;
   the tab bar doesn't minimize on scroll.
-- Large titles: no custom top bars as `safeAreaInset` with `.background(.bar)` (it ignores all safe area
-  edges by default and covers the large title under iOS 26+'s transparent navigation bar). The Browse
-  explore/filter row is the first view of the grid's content instead.
+- Large titles: no custom top bars as `safeAreaInset` with `.background(.bar)` under a navigation bar (it
+  ignores all safe area edges by default and covers the large title under iOS 26+'s transparent navigation
+  bar). Browse has no navigation bar or title at all: its explore field and filter chips are pinned with
+  `safeAreaBar` (iOS 26) or a `safeAreaInset` with the bar material.
 - Never sign in with a real account from tests or CI; there are no Grindr credentials for this project.

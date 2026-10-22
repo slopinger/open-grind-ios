@@ -31,16 +31,16 @@ final class DemoTourTests: XCTestCase {
         sleep(3)  // Let the photos arrive.
         snapshot(app, "03-browse")
 
-        app.buttons["Filters"].tap()
-        XCTAssertTrue(app.navigationBars["Filters"].waitForExistence(timeout: 5))
+        // The filter chips: on-off ones switch right away, the others open a wheel or list.
+        app.buttons["Online"].tap()
+        sleep(2)
         snapshot(app, "04-filters")
-        app.buttons["From"].firstMatch.tap()
-        XCTAssertTrue(app.pickerWheels.firstMatch.waitForExistence(timeout: 5), "Tapping a number row opens a wheel")
+        app.buttons["Online"].tap()
+        app.buttons["Age"].tap()
+        XCTAssertTrue(app.pickerWheels.firstMatch.waitForExistence(timeout: 5), "The age chip opens wheels")
         snapshot(app, "17-filter-wheel")
-        app.buttons["From"].firstMatch.tap()
-        let tags = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Tags'")).firstMatch
-        for _ in 0..<6 where !tags.isHittable { app.swipeUp() }
-        tags.tap()
+        app.buttons["Done"].tap()
+        app.buttons["Tags"].tap()
         XCTAssertTrue(app.buttons["Hiking"].waitForExistence(timeout: 10), "The tag catalog should load")
         app.buttons["Hiking"].tap()
         app.buttons["Coffee"].tap()
@@ -48,7 +48,6 @@ final class DemoTourTests: XCTestCase {
         // Closing the sheet applies the filters; the rest of the tour wants the whole grid.
         app.buttons["Hiking"].tap()
         app.buttons["Coffee"].tap()
-        app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["Done"].tap()
 
         app.buttons["Explore Another Place"].tap()
@@ -62,7 +61,7 @@ final class DemoTourTests: XCTestCase {
         sleep(2)
         snapshot(app, "13-exploring")
         app.buttons["Back to My Location"].tap()
-        XCTAssertTrue(app.navigationBars["Nearby"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Explore Another Place"].waitForExistence(timeout: 10))
 
         tile.tap()
         // The first tile's page comes first; the next profile's page may be loaded beside it.

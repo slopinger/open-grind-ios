@@ -57,8 +57,6 @@ struct RequestTests {
                 "sexualPositions": "1,4", "heightInCmMin": "170", "heightInCmMax": "241",
                 "weightInGramsMin": "60000", "weightInGramsMax": "272156", "tags": "coffee,hiking",
             ])
-        #expect(filters.activeCount == 7)
-        #expect(BrowseFilters().activeCount == 0)
     }
 
     @Test func profileEditsSaveTheWholeProfileAsGrindrsAppDoes() throws {

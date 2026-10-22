@@ -29,8 +29,9 @@ Everyone shown is made up; the avatars are DiceBear's Notionists by Zoish (CC0).
 
 ## Features
 
-- **Browse**: the nearby grid with presence, favorites and unread counts; filters for age, height,
-  weight, position, tribes, looking for, profile tags and more, remembered between launches; pull
+- **Browse**: the nearby grid with presence, favorites and unread counts; a row of filter chips
+  above it (tap to switch, or pick age, height, weight, position, tribes, looking for, profile tags
+  and more on a wheel), remembered between launches; pull
   to refresh and endless scrolling. **Explore** another place by searching for a city or moving a
   pin on a map; your own profile stays where you are (moving it is Grindr's paid Roam, which the
   app doesn't do).

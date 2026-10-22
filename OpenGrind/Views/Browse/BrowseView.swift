@@ -5,7 +5,6 @@ import SwiftUI
 struct BrowseView: View {
     @Environment(AccountSession.self) private var session
     @Environment(AppModel.self) private var app
-    @State private var isShowingFilters = false
     @State private var isShowingExplore = false
     /// The tile whose profile is open.
     @State private var opened: GridProfile?
@@ -20,45 +19,46 @@ struct BrowseView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            content
-                .navigationTitle(browse.exploring == nil ? "Nearby" : "Explore")
-                .sheet(isPresented: $isShowingFilters) {
-                    FilterSheet(filters: browse.filters) { filters in
-                        Task { await browse.apply(filters) }
-                    }
+        // No navigation bar: the place and the filters are the top of the screen,
+        // and profiles open full screen.
+        content
+            .topBar { header }
+            .sheet(isPresented: $isShowingExplore) {
+                ExploreSheet(
+                    start: browse.exploring ?? appearingAt ?? browse.currentPlace,
+                    isAway: browse.exploring != nil || appearingAt != nil, isAppearing: appearingAt != nil
+                ) { place, appearHere in
+                    go(to: place, appearThere: appearHere)
                 }
-                .sheet(isPresented: $isShowingExplore) {
-                    ExploreSheet(
-                        start: browse.exploring ?? appearingAt ?? browse.currentPlace,
-                        isAway: browse.exploring != nil || appearingAt != nil, isAppearing: appearingAt != nil
-                    ) { place, appearHere in
-                        go(to: place, appearThere: appearHere)
-                    }
-                }
-                .routeDestinations()
-                .fullScreenCover(item: $opened) { tile in
-                    ProfilePager(start: tile, transition: transition)
-                }
-        }
-        .task { await browse.loadIfNeeded() }
+            }
+            .fullScreenCover(item: $opened) { tile in
+                ProfilePager(start: tile, transition: transition)
+            }
+            .task { await browse.loadIfNeeded() }
     }
 
     @ViewBuilder
     private var content: some View {
         if browse.profiles.isEmpty {
-            VStack(spacing: 0) {
-                bar
-                LoadStateView(
-                    browse.state, isEmpty: true, retry: { await browse.refresh() }, recovery: backToMyLocation
-                ) {
-                    emptyState
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            LoadStateView(
+                browse.state, isEmpty: true, retry: { await browse.refresh() }, recovery: backToMyLocation
+            ) {
+                emptyState
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             grid
         }
+    }
+
+    private var header: some View {
+        VStack(spacing: 0) {
+            bar
+            FilterBar(filters: browse.filters) { filters in
+                Task { await browse.apply(filters) }
+            }
+        }
+        .padding(.bottom, 6)
     }
 
     /// A place can fail to load for good; going back to your location always works.
@@ -67,24 +67,18 @@ struct BrowseView: View {
         return FailureView.Recovery(title: "Back to My Location") { go(to: nil) }
     }
 
-    /// Part of the content rather than a safe area inset, so it sits below the large
-    /// title and scrolls with the grid instead of covering the title.
     private var bar: some View {
         BrowseBar(
-            place: browse.exploring ?? appearingAt, isAppearing: browse.exploring == nil && appearingAt != nil,
-            activeFilters: browse.filters.activeCount
+            place: browse.exploring ?? appearingAt, isAppearing: browse.exploring == nil && appearingAt != nil
         ) {
             isShowingExplore = true
         } stopExploring: {
             go(to: nil)
-        } showFilters: {
-            isShowingFilters = true
         }
     }
 
     private var grid: some View {
         ScrollView {
-            bar
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 104, maximum: 180), spacing: 2)], spacing: 2) {
                 ForEach(browse.profiles) { profile in
                     Button {
@@ -138,17 +132,15 @@ struct BrowseView: View {
     }
 }
 
-/// The row above the grid: a search-field-like button that opens the map to
-/// explore somewhere else, and the filters.
+/// The top of the grid: a search-field-like button that opens the map to
+/// explore somewhere else.
 private struct BrowseBar: View {
     /// The place explored, or the one you appear at.
     let place: ExplorePlace?
     /// `place` is where you appear, not only explore.
     let isAppearing: Bool
-    let activeFilters: Int
     let explore: () -> Void
     let stopExploring: () -> Void
-    let showFilters: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -198,31 +190,25 @@ private struct BrowseBar: View {
                     .buttonStyle(.plain)
                     .transition(.scale.combined(with: .opacity))
             }
-
-            Button(action: showFilters) {
-                HStack(spacing: 4) {
-                    Image(systemName: "line.3.horizontal.decrease")
-                        .fontWeight(.semibold)
-                    if activeFilters > 0 {
-                        Text(activeFilters, format: .number)
-                            .font(.subheadline.weight(.bold))
-                            .monospacedDigit()
-                    }
-                }
-                .foregroundStyle(activeFilters > 0 ? Color.brandForeground : Color.primary)
-                .padding(.horizontal, activeFilters > 0 ? 12 : 0)
-                .frame(minWidth: 40, minHeight: 40)
-                .background(activeFilters > 0 ? Color.brand : Color(.tertiarySystemFill), in: .capsule)
-                .contentShape(.capsule)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Filters")
-            .accessibilityValue(activeFilters > 0 ? Text("\(activeFilters) active") : Text("None"))
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
         .animation(.default, value: place)
-        .animation(.default, value: activeFilters)
+    }
+}
+
+extension View {
+    /// Pins `content` above a scrolling view: a bar with the scroll edge effect on
+    /// iOS 26, a bar material before.
+    @ViewBuilder
+    fileprivate func topBar(@ViewBuilder _ content: () -> some View) -> some View {
+        if #available(iOS 26, *) {
+            safeAreaBar(edge: .top, spacing: 0, content: content)
+        } else {
+            safeAreaInset(edge: .top, spacing: 0) {
+                content().background(.bar)
+            }
+        }
     }
 }
 
