@@ -198,12 +198,14 @@ private struct BrowseBar: View {
 }
 
 extension View {
-    /// Pins `content` above a scrolling view: a bar with the scroll edge effect on
-    /// iOS 26, a bar material before.
+    /// Pins `content` above a scrolling view, on the bar material (on iOS 26 the
+    /// scroll edge effect alone left the grid too visible behind it).
     @ViewBuilder
     fileprivate func topBar(@ViewBuilder _ content: () -> some View) -> some View {
         if #available(iOS 26, *) {
-            safeAreaBar(edge: .top, spacing: 0, content: content)
+            safeAreaBar(edge: .top, spacing: 0) {
+                content().background(.bar)
+            }
         } else {
             safeAreaInset(edge: .top, spacing: 0) {
                 content().background(.bar)
