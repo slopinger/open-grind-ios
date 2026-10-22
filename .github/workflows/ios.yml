@@ -56,9 +56,10 @@ jobs:
       - name: Test OpenGrindKit on macOS
         run: swift test --package-path OpenGrindKit
 
+      # Release, as installed on a phone; the simulator tests below build Debug.
       - name: Build for iPhone
         run: >
-          xcodebuild build -project OpenGrind.xcodeproj -scheme OpenGrind
+          xcodebuild build -project OpenGrind.xcodeproj -scheme 'OpenGrind Release'
           -destination 'generic/platform=iOS' -derivedDataPath build/device
           CODE_SIGNING_ALLOWED=NO
 

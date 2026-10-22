@@ -105,6 +105,10 @@ aarch64-apple-darwin` and cmake, then run the script directly. Run it again afte
 Pick your team under Signing & Capabilities to run it on a device. Start with **Try the Demo** to
 explore without an account, or pass `-demoMode YES` as a launch argument.
 
+The **OpenGrind** scheme runs a debug build with the debugger attached and runs the tests. To use the app
+as it would ship, optimized and faster, pick the **OpenGrind Release** scheme and run it: it builds the
+Release configuration and starts the app without the debugger. (The Rust bridge is always optimized.)
+
 ### Without a Mac
 
 The Nix flake builds the Rust bridge and the Swift package on Linux and runs their tests, checks

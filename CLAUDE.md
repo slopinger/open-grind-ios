@@ -40,7 +40,9 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   it with the `hydra` MCP server). It builds `hydraJobs` = every flake check on x86_64-linux and
   aarch64-linux where it evaluates (Swift is marked broken on aarch64-linux in nixpkgs, so only `core`
   and `bindings` run there).
-- GitHub CI: `.github/workflows/ios.yml` (macos-26): xcframework, `swift test` on macOS, device build,
+- Schemes: `OpenGrind` (Debug run with LLDB, tests) and `OpenGrind Release` (Release run without a debugger,
+  no tests; for using the app on a phone). The xcframework is always Cargo's release profile (LTO, 1 codegen unit).
+- GitHub CI: `.github/workflows/ios.yml` (macos-26): xcframework, `swift test` on macOS, device build (Release scheme),
   simulator unit + UI tests, screenshots artifact (`gh run download <id> -n screenshots`).
   The iOS UI cannot be compiled on Linux; check CI after every app change.
 - README screenshots: `docs/screenshots/*.png`, shown as a captioned 3-column table. Refresh them
