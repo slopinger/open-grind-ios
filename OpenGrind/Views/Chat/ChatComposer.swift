@@ -5,7 +5,6 @@ import SwiftUI
 /// The message field, photo button and send button under a chat.
 struct ChatComposer: View {
     @Bindable var chat: ChatModel
-    var isFocused: FocusState<Bool>.Binding
 
     @State private var photoItem: PhotosPickerItem?
     @State private var sentCount = 0
@@ -21,7 +20,6 @@ struct ChatComposer: View {
 
             TextField("Message", text: $chat.draft, axis: .vertical)
                 .lineLimit(1...6)
-                .focused(isFocused)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
                 .background(Color(.secondarySystemFill), in: .rect(cornerRadius: 20, style: .continuous))
@@ -40,7 +38,13 @@ struct ChatComposer: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.bar)
+        .background {
+            // Down behind the keyboard, so its rounded corners (iOS 26) show the bar
+            // rather than the transcript.
+            Rectangle()
+                .fill(.bar)
+                .ignoresSafeArea(edges: .bottom)
+        }
         .onChange(of: photoItem) { _, item in
             guard let item else { return }
             photoItem = nil
