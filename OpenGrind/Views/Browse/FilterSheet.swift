@@ -56,18 +56,21 @@ struct FilterSheet: View {
                     MultiSelectRow(title: "Meet At", selection: $filters.meetAt, emptyLabel: "Any")
                     MultiSelectRow(title: "NSFW Pics", selection: $filters.acceptsNSFWPics, emptyLabel: "Any")
                 }
-
-                if !filters.isDefault {
-                    Section {
-                        Button("Reset Filters", role: .destructive) {
-                            withAnimation { filters = BrowseFilters() }
-                        }
-                    }
-                }
             }
             .navigationTitle("Filters")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Up here rather than below the form, so it's always in reach.
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Reset") {
+                        withAnimation {
+                            filters = BrowseFilters()
+                            openWheel = nil
+                        }
+                    }
+                    .disabled(filters.isDefault)
+                    .accessibilityLabel("Reset Filters")
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }

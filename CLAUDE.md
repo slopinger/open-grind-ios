@@ -98,7 +98,7 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   Photos are edited from Edit Profile and save immediately.
 - Grid filters: a sideways row of chips (`FilterBar`, as in Grindr's app) starts with the Filters button
   (with the active count), which opens `FilterSheet` with every filter (tags first; age, height and weight
-  as `RangeWheelRow`s, From and To wheels side by side) and is the only way to clear them all; then only
+  as `RangeWheelRow`s, From and To wheels side by side) and is the only way to clear them all (Reset, top left); then only
   the common ones: Online,
   Tags (second, much used), Age (two wheels in a short bottom sheet), Position and Looking For (checklists,
   several allowed), Favorites. Each applies (and reloads the grid) when its sheet closes.
