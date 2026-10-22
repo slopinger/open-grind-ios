@@ -73,8 +73,8 @@ private struct ProfileContent: View {
                 LoadingView()
             }
         }
-        // The tab bar stays below the profile: hiding it on the way in got it stuck
-        // hidden after the zoom transition back to the grid.
+        // Pushed from Messages or Interest; from the grid it's full screen anyway.
+        .toolbar(model.isMe ? .automatic : .hidden, for: .tabBar)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // Pages next to the current one leave the bar to it.

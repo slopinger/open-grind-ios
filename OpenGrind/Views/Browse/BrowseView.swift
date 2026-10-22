@@ -7,6 +7,8 @@ struct BrowseView: View {
     @Environment(AppModel.self) private var app
     @State private var isShowingFilters = false
     @State private var isShowingExplore = false
+    /// The tile whose profile is open.
+    @State private var opened: GridProfile?
     @Namespace private var transition
 
     private var browse: BrowseModel { session.browse }
@@ -18,7 +20,6 @@ struct BrowseView: View {
     }
 
     var body: some View {
-        // Untyped: the stack holds grid tiles as well as routes.
         NavigationStack {
             content
                 .navigationTitle(browse.exploring == nil ? "Nearby" : "Explore")
@@ -36,7 +37,7 @@ struct BrowseView: View {
                     }
                 }
                 .routeDestinations()
-                .navigationDestination(for: GridProfile.self) { tile in
+                .fullScreenCover(item: $opened) { tile in
                     ProfilePager(start: tile, transition: transition)
                 }
         }
@@ -86,7 +87,9 @@ struct BrowseView: View {
             bar
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 104, maximum: 180), spacing: 2)], spacing: 2) {
                 ForEach(browse.profiles) { profile in
-                    NavigationLink(value: profile) {
+                    Button {
+                        opened = profile
+                    } label: {
                         ProfileTile(profile: profile, unreadCount: browse.unreadCount(of: profile))
                             .matchedTransitionSource(id: profile.id, in: transition)
                     }
