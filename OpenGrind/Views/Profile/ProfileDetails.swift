@@ -75,7 +75,8 @@ struct ProfileDetails: View {
             .font(.subheadline)
             .foregroundStyle(.secondary)
             if let tap = profile.receivedTap {
-                Text("\(tap.emoji) Sent you a \(tap.localizedName) tap")
+                Label("Sent you a \(tap.localizedName) tap", systemImage: tap.systemImage)
+                    .labelStyle(.titleAndIcon)
                     .font(.subheadline.weight(.medium))
                     .padding(.top, 2)
             }

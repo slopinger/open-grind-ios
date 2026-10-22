@@ -15,7 +15,7 @@ Grindr's terms of service.
   <tr>
     <td align="center" width="33%"><img src="docs/screenshots/chat.png" width="240" alt="A chat with yellow outgoing and grey incoming bubbles, a Read receipt and the message field"><br><b>Chats</b></td>
     <td align="center" width="33%"><img src="docs/screenshots/messages.png" width="240" alt="Inbox with search, photos, last messages and times"><br><b>Messages</b></td>
-    <td align="center" width="33%"><img src="docs/screenshots/interest.png" width="240" alt="Taps received, with tap emoji, distances and a Mutual badge"><br><b>Interest</b></td>
+    <td align="center" width="33%"><img src="docs/screenshots/interest.png" width="240" alt="Taps received, with tap icons, distances and a Mutual badge"><br><b>Interest</b></td>
   </tr>
   <tr>
     <td align="center" width="33%"><img src="docs/screenshots/edit-profile.png" width="240" alt="Edit Profile form with photos, about text, tags and stats such as age, height and weight"><br><b>Edit Profile</b></td>

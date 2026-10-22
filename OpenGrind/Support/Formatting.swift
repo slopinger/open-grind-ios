@@ -102,6 +102,18 @@ extension ProfileAttribute {
     }
 }
 
+extension TapType {
+    /// A symbol rather than the official app's emoji, so it takes the text's
+    /// weight and color.
+    var systemImage: String {
+        switch self {
+        case .friendly: "hand.wave.fill"
+        case .hot: "flame.fill"
+        case .looking: "eyes"
+        }
+    }
+}
+
 extension ReportReason {
     var localizedName: String { String(localized: String.LocalizationValue(displayName)) }
 }

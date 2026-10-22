@@ -52,8 +52,9 @@ struct InterestView: View {
                     distance: tap.distance, isLocked: !tap.isViewable
                 ) {
                     if let type = tap.type {
-                        Text(type.emoji)
-                            .font(.title2)
+                        Image(systemName: type.systemImage)
+                            .font(.title3)
+                            .foregroundStyle(.tint)
                             .accessibilityLabel(type.localizedName)
                     }
                     if tap.isMutual {

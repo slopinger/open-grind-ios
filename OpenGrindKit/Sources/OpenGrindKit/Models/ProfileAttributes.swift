@@ -282,13 +282,4 @@ public enum TapType: Int, ProfileAttribute {
         case .looking: "Looking"
         }
     }
-
-    /// The emoji the official app shows for the tap.
-    public var emoji: String {
-        switch self {
-        case .friendly: "🍪"
-        case .hot: "🔥"
-        case .looking: "😈"
-        }
-    }
 }

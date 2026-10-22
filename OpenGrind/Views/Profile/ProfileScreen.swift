@@ -192,10 +192,8 @@ private struct ProfileContent: View {
         HStack(spacing: 12) {
             Menu {
                 ForEach(TapType.allCases) { type in
-                    Button {
+                    Button(type.localizedName, systemImage: type.systemImage) {
                         Task { await model.sendTap(type) }
-                    } label: {
-                        Text(verbatim: "\(type.emoji) \(type.localizedName)")
                     }
                 }
             } label: {
