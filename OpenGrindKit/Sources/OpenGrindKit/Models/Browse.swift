@@ -132,6 +132,7 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
     public var onlineOnly = false
     public var photosOnly = false
     public var facePhotosOnly = false
+    public var albumsOnly = false
     public var favoritesOnly = false
     public var notChattedToday = false
     public var ages: ClosedRange<Int> = BrowseFilters.ageBounds
@@ -144,6 +145,9 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
     public var relationshipStatuses: Set<RelationshipStatus> = []
     public var meetAt: Set<MeetAt> = []
     public var acceptsNSFWPics: Set<AcceptsNSFWPics> = []
+    public var sexualHealth: Set<SexualHealthPractice> = []
+    /// IDs of ``Gender``s (``Gender/filterOptions(_:)``).
+    public var genders: Set<Int> = []
     /// Keys of ``ProfileTag``s; matching profiles have at least one of them.
     public var tags: Set<String> = []
 
@@ -155,10 +159,11 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
     /// How many filters are set, for the count on the filters button.
     public var activeCount: Int {
         [
-            onlineOnly, photosOnly, facePhotosOnly, favoritesOnly, notChattedToday,
+            onlineOnly, photosOnly, facePhotosOnly, albumsOnly, favoritesOnly, notChattedToday,
             ages != Self.ageBounds, heights != Self.heightBounds, weights != Self.weightBounds,
             !positions.isEmpty, !lookingFor.isEmpty, !tribes.isEmpty, !bodyTypes.isEmpty,
-            !relationshipStatuses.isEmpty, !meetAt.isEmpty, !acceptsNSFWPics.isEmpty, !tags.isEmpty,
+            !relationshipStatuses.isEmpty, !meetAt.isEmpty, !acceptsNSFWPics.isEmpty, !sexualHealth.isEmpty,
+            !genders.isEmpty, !tags.isEmpty,
         ].filter { $0 }.count
     }
 
@@ -185,6 +190,7 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
         flag("photoOnly", photosOnly)
         flag("faceOnly", facePhotosOnly)
         flag("notRecentlyChatted", notChattedToday)
+        flag("hasAlbum", albumsOnly)
         if ages != Self.ageBounds {
             items.append(URLQueryItem(name: "ageMin", value: String(ages.lowerBound)))
             items.append(URLQueryItem(name: "ageMax", value: String(ages.upperBound)))
@@ -208,8 +214,43 @@ public struct BrowseFilters: Hashable, Sendable, Codable {
             items.append(URLQueryItem(name: "tags", value: tags.sorted().joined(separator: ",")))
         }
         if let page { items.append(URLQueryItem(name: "pageNumber", value: String(page))) }
+        if !genders.isEmpty {
+            items.append(URLQueryItem(name: "genders", value: genders.sorted().map(String.init).joined(separator: ",")))
+        }
         flag("favorites", favoritesOnly)
+        list("sexualHealth", sexualHealth)
         return items
+    }
+}
+
+extension BrowseFilters {
+    /// Missing keys keep their defaults, so filters saved before a filter was
+    /// added still load.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        func value<T: Decodable>(_ key: CodingKeys, _ fallback: T) throws -> T {
+            try container.decodeIfPresent(T.self, forKey: key) ?? fallback
+        }
+        self.init()
+        onlineOnly = try value(.onlineOnly, onlineOnly)
+        photosOnly = try value(.photosOnly, photosOnly)
+        facePhotosOnly = try value(.facePhotosOnly, facePhotosOnly)
+        albumsOnly = try value(.albumsOnly, albumsOnly)
+        favoritesOnly = try value(.favoritesOnly, favoritesOnly)
+        notChattedToday = try value(.notChattedToday, notChattedToday)
+        ages = try value(.ages, ages)
+        heights = try value(.heights, heights)
+        weights = try value(.weights, weights)
+        positions = try value(.positions, positions)
+        lookingFor = try value(.lookingFor, lookingFor)
+        tribes = try value(.tribes, tribes)
+        bodyTypes = try value(.bodyTypes, bodyTypes)
+        relationshipStatuses = try value(.relationshipStatuses, relationshipStatuses)
+        meetAt = try value(.meetAt, meetAt)
+        acceptsNSFWPics = try value(.acceptsNSFWPics, acceptsNSFWPics)
+        sexualHealth = try value(.sexualHealth, sexualHealth)
+        genders = try value(.genders, genders)
+        tags = try value(.tags, tags)
     }
 }
 

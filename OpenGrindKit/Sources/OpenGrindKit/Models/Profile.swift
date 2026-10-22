@@ -293,11 +293,13 @@ public struct Gender: Identifiable, Hashable, Sendable, Decodable {
     public var displayGroup: Int?
     /// Where the gender goes in the profile list.
     public var profileSortOrder: Int?
+    /// Where the gender goes in the filter list.
+    public var filterSortOrder: Int?
     /// Genders that can't be chosen together with this one.
     public var excludedOnProfile: [Int]
 
     enum CodingKeys: String, CodingKey {
-        case genderId, gender, displayGroup, sortProfile, excludeOnProfileSelection
+        case genderId, gender, displayGroup, sortProfile, sortFilter, excludeOnProfileSelection
     }
 
     public init(from decoder: any Decoder) throws {
@@ -306,6 +308,7 @@ public struct Gender: Identifiable, Hashable, Sendable, Decodable {
         name = try container.decode(String.self, forKey: .gender)
         displayGroup = container.lenient(Int.self, forKey: .displayGroup)
         profileSortOrder = container.lenient(Int.self, forKey: .sortProfile)
+        filterSortOrder = container.lenient(Int.self, forKey: .sortFilter)
         excludedOnProfile = container.lossyArray(of: Int.self, forKey: .excludeOnProfileSelection)
     }
 
@@ -316,11 +319,26 @@ public struct Gender: Identifiable, Hashable, Sendable, Decodable {
     /// offered. The main genders come first, as upstream Open Grind orders them,
     /// then the catalog's profile order.
     public static func profileOptions(_ genders: [Gender], keeping chosen: [Int] = []) -> [Gender] {
-        let primary = [1, 4, 5, 2, 6, 7, 3]
-        func rank(_ gender: Gender) -> (Int, Int, Int) {
-            (primary.firstIndex(of: gender.id) ?? .max, gender.profileSortOrder ?? .max, gender.id)
+        genders.filter { $0.isOfferedOnProfile || chosen.contains($0.id) }.sorted {
+            rank($0, \.profileSortOrder) < rank($1, \.profileSortOrder)
         }
-        return genders.filter { $0.isOfferedOnProfile || chosen.contains($0.id) }.sorted { rank($0) < rank($1) }
+    }
+
+    /// "Ask me", which says nothing to filter by.
+    static let askMeID = 62
+
+    /// The genders to filter the grid by, ordered as upstream Open Grind does:
+    /// the offered ones without "Ask me", main genders first, then the catalog's
+    /// filter order.
+    public static func filterOptions(_ genders: [Gender]) -> [Gender] {
+        genders.filter { $0.isOfferedOnProfile && $0.id != askMeID }.sorted {
+            rank($0, \.filterSortOrder) < rank($1, \.filterSortOrder)
+        }
+    }
+
+    private static func rank(_ gender: Gender, _ order: KeyPath<Gender, Int?>) -> (Int, Int, Int) {
+        let primary = [1, 4, 5, 2, 6, 7, 3]
+        return (primary.firstIndex(of: gender.id) ?? .max, gender[keyPath: order] ?? .max, gender.id)
     }
 }
 

@@ -48,16 +48,46 @@ struct RequestTests {
         filters.heights = 170...BrowseFilters.heightBounds.upperBound
         filters.favoritesOnly = true
         filters.tags = ["hiking", "coffee"]
+        filters.albumsOnly = true
+        filters.genders = [4, 1]
+        filters.sexualHealth = [.prep, .condoms]
         let items = filters.queryItems(page: 2).map { "\($0.name)=\($0.value ?? "")" }
         // Names and order of the official app's CascadeRequest.toQueryMap().
         #expect(
             items == [
-                "onlineOnly=true", "ageMin=25", "ageMax=40", "heightCmMin=170", "heightCmMax=241",
+                "onlineOnly=true", "hasAlbum=true", "ageMin=25", "ageMax=40", "heightCmMin=170", "heightCmMax=241",
                 "weightGramsMin=60000", "weightGramsMax=272156", "sexualPositions=1,4", "tags=coffee,hiking",
-                "pageNumber=2", "favorites=true",
+                "pageNumber=2", "genders=1,4", "favorites=true", "sexualHealth=1,3",
             ])
-        #expect(filters.activeCount == 7)
+        #expect(filters.activeCount == 10)
         #expect(BrowseFilters().activeCount == 0)
+    }
+
+    @Test func filtersSavedBeforeNewOnesStillLoad() throws {
+        let saved = Data(#"{"onlineOnly":true,"tags":["hiking"]}"#.utf8)
+        let filters = try JSON.decode(BrowseFilters.self, from: saved)
+        #expect(filters.onlineOnly && filters.tags == ["hiking"])
+        #expect(filters.genders.isEmpty && !filters.albumsOnly)
+        // And what's saved now comes back the same.
+        var all = filters
+        all.genders = [1]
+        all.ages = 20...30
+        #expect(try JSON.decode(BrowseFilters.self, from: JSONEncoder().encode(all)) == all)
+    }
+
+    @Test func genderFiltersLeaveOutAskMeAndUnofferedGenders() throws {
+        let catalog = try JSON.decode(
+            [Gender].self,
+            from: Data(
+                #"""
+                [{"genderId":62,"gender":"Ask me","displayGroup":1},
+                 {"genderId":9,"gender":"Old","displayGroup":0},
+                 {"genderId":20,"gender":"Later","displayGroup":1,"sortFilter":2},
+                 {"genderId":21,"gender":"Earlier","displayGroup":1,"sortFilter":1},
+                 {"genderId":4,"gender":"Trans Man","displayGroup":1,"sortFilter":9},
+                 {"genderId":1,"gender":"Man","displayGroup":1,"sortFilter":9}]
+                """#.utf8))
+        #expect(Gender.filterOptions(catalog).map(\.id) == [1, 4, 21, 20])
     }
 
     @Test func profileEditsSaveTheWholeProfileAsGrindrsAppDoes() throws {
