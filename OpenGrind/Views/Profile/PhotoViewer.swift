@@ -6,7 +6,8 @@ import SwiftUI
 struct PhotoViewer: View {
     let urls: [URL]
     @State var selection: Int
-    /// How far the photo is pulled towards closing, from 0 to 1.
+    /// How far the photo is pulled towards closing, from 0 to 1: it shrinks and
+    /// the controls fade.
     @State private var pull: Double = 0
 
     @Environment(\.dismiss) private var dismiss
@@ -19,9 +20,9 @@ struct PhotoViewer: View {
             }
         }
         .tabViewStyle(.page(indexDisplayMode: urls.count > 1 && pull == 0 ? .always : .never))
-        // What it was opened from shows through while pulling.
-        .background(.black.opacity(1 - pull))
-        .presentationBackground(.clear)
+        // Solid: a clear presentation background, to see the profile while pulling,
+        // took the background off the profile's own full-screen cover as well.
+        .background(.black)
         .ignoresSafeArea()
         .accessibilityAction(.escape) { dismiss() }
         .overlay(alignment: .topTrailing) {
@@ -53,9 +54,6 @@ private struct ZoomablePhoto: View {
     @State private var committedScale: CGFloat = 1
     @State private var offset: CGSize = .zero
     @State private var committedOffset: CGSize = .zero
-    /// Whether the drag going on closes the viewer; decided by its first move,
-    /// so sideways drags still go to the next photo.
-    @State private var isPulling: Bool?
 
     var body: some View {
         RemoteImage(url: url, pointSize: 1024, contentMode: .fit)
@@ -70,7 +68,7 @@ private struct ZoomablePhoto: View {
                     }
             )
             .simultaneousGesture(scale > 1 ? pan : nil)
-            .simultaneousGesture(scale > 1 ? nil : pullToClose)
+            .gesture(VerticalPan(isEnabled: scale == 1, changed: pullChanged, ended: pullEnded))
             .onTapGesture(count: 2) {
                 withAnimation(.spring) {
                     if scale > 1 {
@@ -95,29 +93,22 @@ private struct ZoomablePhoto: View {
             .onEnded { _ in committedOffset = offset }
     }
 
-    /// Follows the finger up or down; far or fast enough closes, otherwise the
-    /// photo springs back.
-    private var pullToClose: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                let moved = value.translation
-                if isPulling == nil { isPulling = abs(moved.height) > abs(moved.width) }
-                guard isPulling == true else { return }
-                offset = moved
-                pull = min(Double(abs(moved.height)) / 400, 1)
+    /// Pulling up or down to close: the photo follows the finger.
+    private func pullChanged(_ moved: CGSize) {
+        offset = moved
+        pull = min(Double(abs(moved.height)) / 400, 1)
+    }
+
+    /// Far or fast enough closes, otherwise the photo springs back.
+    private func pullEnded(_ moved: CGSize, velocity: CGSize) {
+        if abs(moved.height) > 120 || abs(velocity.height) > 800 {
+            close()
+        } else {
+            withAnimation(.spring) {
+                offset = .zero
+                pull = 0
             }
-            .onEnded { value in
-                defer { isPulling = nil }
-                guard isPulling == true else { return }
-                if abs(value.translation.height) > 120 || abs(value.predictedEndTranslation.height) > 300 {
-                    close()
-                } else {
-                    withAnimation(.spring) {
-                        offset = .zero
-                        pull = 0
-                    }
-                }
-            }
+        }
     }
 
     private func reset() {
@@ -125,5 +116,59 @@ private struct ZoomablePhoto: View {
         committedScale = 1
         offset = .zero
         committedOffset = .zero
+    }
+}
+
+/// A pan that only starts when it moves more up or down than sideways, so the
+/// pager under it still gets sideways swipes. A SwiftUI drag gesture can't
+/// decline a touch that way: it took every swipe from the pager.
+private struct VerticalPan: UIGestureRecognizerRepresentable {
+    var isEnabled: Bool
+    let changed: (CGSize) -> Void
+    let ended: (CGSize, _ velocity: CGSize) -> Void
+
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
+        let pan = UIPanGestureRecognizer()
+        pan.delegate = context.coordinator
+        return pan
+    }
+
+    func updateUIGestureRecognizer(_ recognizer: UIPanGestureRecognizer, context: Context) {
+        recognizer.isEnabled = isEnabled
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: UIPanGestureRecognizer, context: Context) {
+        let translation = recognizer.translation(in: recognizer.view)
+        let moved = CGSize(width: translation.x, height: translation.y)
+        switch recognizer.state {
+        case .changed:
+            changed(moved)
+        case .ended, .cancelled, .failed:
+            let velocity = recognizer.velocity(in: recognizer.view)
+            ended(moved, CGSize(width: velocity.x, height: velocity.y))
+        default:
+            break
+        }
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = recognizer as? UIPanGestureRecognizer else { return false }
+            let velocity = pan.velocity(in: pan.view)
+            return abs(velocity.y) > abs(velocity.x)
+        }
+
+        /// The pager waits for this pan to decline before it scrolls, so a vertical
+        /// swipe doesn't move it too.
+        func gestureRecognizer(
+            _ recognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer
+        ) -> Bool {
+            other.view is UIScrollView
+        }
     }
 }
