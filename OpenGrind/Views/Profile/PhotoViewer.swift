@@ -59,7 +59,7 @@ private struct ZoomablePhoto: View {
 
     var body: some View {
         RemoteImage(url: url, pointSize: 1024, contentMode: .fit)
-            .scaleEffect(scale * (1 - pull * 0.3))
+            .scaleEffect(scale * CGFloat(1 - pull * 0.3))
             .offset(offset)
             .gesture(
                 MagnifyGesture()
@@ -104,7 +104,7 @@ private struct ZoomablePhoto: View {
                 if isPulling == nil { isPulling = abs(moved.height) > abs(moved.width) }
                 guard isPulling == true else { return }
                 offset = moved
-                pull = min(abs(moved.height) / 400, 1)
+                pull = min(Double(abs(moved.height)) / 400, 1)
             }
             .onEnded { value in
                 defer { isPulling = nil }
