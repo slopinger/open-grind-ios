@@ -2,9 +2,9 @@ import OpenGrindKit
 import SwiftUI
 
 /// A row of chips above the grid that scrolls sideways: the button for every
-/// filter (``FilterSheet``), then the common ones. On-off filters switch with a
-/// tap, age opens two wheels from the bottom of the screen, and options and
-/// tags open a checklist. Every change reloads the grid.
+/// filter (``FilterSheet``, which also clears them), then the common ones. On-off
+/// filters switch with a tap, age opens two wheels from the bottom of the screen,
+/// and options and tags open a checklist. Every change reloads the grid.
 struct FilterBar: View {
     let filters: BrowseFilters
     let apply: (BrowseFilters) -> Void
@@ -15,15 +15,6 @@ struct FilterBar: View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
                 allFiltersChip
-                if !filters.isDefault {
-                    FilterChip(isActive: false) {
-                        apply(BrowseFilters())
-                    } label: {
-                        Image(systemName: "xmark")
-                            .fontWeight(.bold)
-                    }
-                    .accessibilityLabel("Clear Filters")
-                }
                 toggle("Online", \.onlineOnly)
                 tagsChip
                 ageChip
@@ -109,18 +100,7 @@ struct FilterBar: View {
 
     /// Shows the range once it's narrowed: "25–40", "30+" or "Up to 40".
     private var ageChip: some View {
-        let ages = filters.ages
-        let bounds = BrowseFilters.ageBounds
-        let lower = ages.lowerBound > bounds.lowerBound ? ages.lowerBound : nil
-        let upper = ages.upperBound < bounds.upperBound ? ages.upperBound : nil
-        let value: String? =
-            switch (lower, upper) {
-            case (let lower?, let upper?): "\(lower)–\(upper)"
-            case (let lower?, nil): String(localized: "\(lower)+")
-            case (nil, let upper?): String(localized: "Up to \(upper)")
-            case (nil, nil): nil
-            }
-        return pickerChip(.age, "Age", value: value)
+        pickerChip(.age, "Age", value: RangeWheels.summary(of: filters.ages, in: BrowseFilters.ageBounds) { "\($0)" })
     }
 
     /// Shows the options chosen, e.g. "Top or Vers Top".
@@ -218,63 +198,5 @@ private struct FilterPickerSheet<Content: View>: View {
         .sensoryFeedback(.selection, trigger: draft)
         // However it closes, including a swipe down.
         .onDisappear { apply(draft) }
-    }
-}
-
-/// "From" and "To" wheels side by side; the outer bounds read "Any".
-private struct RangeWheels: View {
-    @Binding var range: ClosedRange<Int>
-    let bounds: ClosedRange<Int>
-    let values: [Int]
-    let label: (Int) -> Text
-
-    var body: some View {
-        HStack(spacing: 0) {
-            wheel("From", selection: lower) {
-                Text("Any").tag(bounds.lowerBound)
-                ForEach(values.filter { $0 > bounds.lowerBound && $0 <= range.upperBound }, id: \.self) { value in
-                    label(value).tag(value)
-                }
-            }
-            Text(verbatim: "–")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            wheel("To", selection: upper) {
-                ForEach(values.filter { $0 >= range.lowerBound && $0 < bounds.upperBound }, id: \.self) { value in
-                    label(value).tag(value)
-                }
-                Text("Any").tag(bounds.upperBound)
-            }
-        }
-    }
-
-    private func wheel(
-        _ title: LocalizedStringKey, selection: Binding<Int>, @ViewBuilder options: () -> some View
-    ) -> some View {
-        Picker(title, selection: selection, content: options)
-            .pickerStyle(.wheel)
-            .labelsHidden()
-            .frame(maxWidth: .infinity)
-            // Side by side, each wheel only takes touches on its own half.
-            .clipped()
-            .contentShape(.rect)
-            .accessibilityLabel(Text(title))
-    }
-
-    private var lower: Binding<Int> {
-        Binding {
-            min(max(range.lowerBound, bounds.lowerBound), bounds.upperBound)
-        } set: {
-            range = $0...max($0, range.upperBound)
-        }
-    }
-
-    private var upper: Binding<Int> {
-        Binding {
-            min(max(range.upperBound, bounds.lowerBound), bounds.upperBound)
-        } set: {
-            range = min(range.lowerBound, $0)...$0
-        }
     }
 }

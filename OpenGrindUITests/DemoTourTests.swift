@@ -34,14 +34,13 @@ final class DemoTourTests: XCTestCase {
         app.buttons["Filters"].tap()
         XCTAssertTrue(app.navigationBars["Filters"].waitForExistence(timeout: 5))
         snapshot(app, "04-filters")
-        app.buttons["From"].firstMatch.tap()
-        XCTAssertTrue(app.pickerWheels.firstMatch.waitForExistence(timeout: 5), "Tapping a number row opens a wheel")
+        // In the form, not the chips behind the sheet.
+        let age = app.collectionViews.buttons["Age"]
+        age.tap()
+        XCTAssertTrue(app.pickerWheels.firstMatch.waitForExistence(timeout: 5), "Tapping a range row opens its wheels")
         snapshot(app, "17-filter-wheel")
-        app.buttons["From"].firstMatch.tap()
-        // In the form, not the Tags chip behind the sheet.
-        let tags = app.collectionViews.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Tags'")).firstMatch
-        for _ in 0..<6 where !tags.isHittable { app.swipeUp() }
-        tags.tap()
+        age.tap()
+        app.collectionViews.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Tags'")).firstMatch.tap()
         XCTAssertTrue(app.buttons["Hiking"].waitForExistence(timeout: 10), "The tag catalog should load")
         app.buttons["Hiking"].tap()
         app.buttons["Coffee"].tap()

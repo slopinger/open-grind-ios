@@ -97,7 +97,9 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
   (age, height, weight) use `WheelPickerRow`, which opens a wheel below the row, one at a time per form.
   Photos are edited from Edit Profile and save immediately.
 - Grid filters: a sideways row of chips (`FilterBar`, as in Grindr's app) starts with the Filters button
-  (with the active count), which opens `FilterSheet` with every filter; then only the common ones: Online,
+  (with the active count), which opens `FilterSheet` with every filter (tags first; age, height and weight
+  as `RangeWheelRow`s, From and To wheels side by side) and is the only way to clear them all; then only
+  the common ones: Online,
   Tags (second, much used), Age (two wheels in a short bottom sheet), Position and Looking For (checklists,
   several allowed), Favorites. Each applies (and reloads the grid) when its sheet closes.
 - Own tags: `profileTags` keys in the profile update (max 10). Profiles carry keys or texts; `MeModel`
@@ -112,5 +114,6 @@ it is an iOS app, built and tested on GitHub Actions (macOS runner).
 - Large titles: no custom top bars as `safeAreaInset` with `.background(.bar)` under a navigation bar (it
   ignores all safe area edges by default and covers the large title under iOS 26+'s transparent navigation
   bar). Browse has no navigation bar or title at all: its explore field and filter chips are pinned with
-  `safeAreaBar` (iOS 26) or a `safeAreaInset` with the bar material.
+  `safeAreaBar` (iOS 26) or a `safeAreaInset`, both on the bar material (the iOS 26 edge effect alone was
+  too transparent).
 - Never sign in with a real account from tests or CI; there are no Grindr credentials for this project.
